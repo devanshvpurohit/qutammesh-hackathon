@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --color-hackathon-primary: #4ade80;
+  --color-hackathon-secondary: #60a5fa;
+  --color-hackathon-bg: #1e1b4b;
+  --font-pixel: "Press Start 2P", cursive, system-ui;
+}
+
+@layer base {
+  body {
+    @apply m-0 p-0 overflow-hidden bg-hackathon-bg text-white font-pixel;
+  }
+}
+
+/* Custom retro styling */
+.pixel-border {
+  border: 4px solid white;
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.pixel-card {
+  @apply bg-zinc-900 border-4 border-white p-6;
+  box-shadow: 8px 8px 0px 0px var(--color-black, black);
+}
+
+.pixel-btn {
+  @apply bg-hackathon-primary text-black border-4 border-black font-pixel px-4 py-3 uppercase hover:-translate-y-1 hover:shadow-none active:bg-green-500 transition-all cursor-pointer;
+  box-shadow: 4px 4px 0px 0px var(--color-black, black);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.8), 0 0 20px rgba(74, 222, 128, 0.6);
+}
