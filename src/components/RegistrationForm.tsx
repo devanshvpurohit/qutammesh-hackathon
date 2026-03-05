@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { EventBus } from '../game/EventBus';
-import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
 
 export const RegistrationForm = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
