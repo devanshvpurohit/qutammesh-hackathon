@@ -352,37 +352,9 @@ export class Game extends Scene {
             trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
         });
 
-        // Finale: Castle (5500)
-        this.add.text(5500, 300, 'FINAL CASTLE', {
-            fontFamily: '"Press Start 2P"', fontSize: '30px', color: '#000000', align: 'center'
-        }).setOrigin(0.5);
-
-        // Castle Pixel Art Generator
-        this.generatePixelArt('castle_placeholder', {
-            '0': 0x000000, '1': 0x64748b, '2': 0x94a3b8, '3': 0x475569, '4': 0x000000
-        }, [
-            "1010101010101010101",
-            "1111111111111111111",
-            "1222222222222222221",
-            "1111111111111111111",
-            "1333333333333333331",
-            "1111111111111111111",
-            "1222222222222222221",
-            "1111111111111111111",
-            "1333333333333333331",
-            "1111111111111111111",
-            "1222222144412222221",
-            "1111111444441111111",
-            "1333333444443333331",
-            "1111111444441111111",
-            "1222222444442222221",
-            "1111111444441111111",
-        ], 16);
-
-        this.platforms.create(5500, 768 - 160, 'castle_placeholder');
-
+        // Finale: Boss Arena (5100)
         // Villain Boss
-        this.bossText = this.add.text(5100, 300, 'Villain blocks the path!\nPRESS F TO DEFEAT', {
+        this.bossText = this.add.text(5100, 300, 'VILLAIN BLOCKS THE PATH!\nPRESS F TO DEFEAT', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ff0000', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
@@ -392,18 +364,25 @@ export class Game extends Scene {
         this.boss.setImmovable(true);
         // Boss acts like a wall, player can't walk past without killing him
         this.physics.add.collider(this.player, this.boss);
-
-        // Castle Trigger (Automatic) - Positioned in front of the castle door
-        const castleTrigger = this.triggers.create(5400, 768 - 128, 'qblock_placeholder');
-        castleTrigger.setScale(3, 5); // Make it a large detection zone
-        castleTrigger.setVisible(false);
-        castleTrigger.refreshBody(); // Static bodies need refresh after scale
-        castleTrigger.setData('type', 'castle');
     }
 
     update() {
         if (this.player) {
             this.player.update();
+
+            // Background Color Shift on Boss approach
+            if (this.player.x > 4500) {
+                const progress = Phaser.Math.Clamp((this.player.x - 4500) / 600, 0, 1);
+                // Interpolate from Sky Blue (#87CEEB) to Boss Red (#4a0404)
+                const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
+                const endColor = Phaser.Display.Color.HexStringToColor('#4a0404');
+                const red = Phaser.Math.Interpolation.Linear([startColor.r, endColor.r], progress);
+                const green = Phaser.Math.Interpolation.Linear([startColor.g, endColor.g], progress);
+                const blue = Phaser.Math.Interpolation.Linear([startColor.b, endColor.b], progress);
+                this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(red, green, blue));
+            } else {
+                this.cameras.main.setBackgroundColor('#87CEEB');
+            }
         }
 
         // Boss interaction loop
@@ -430,6 +409,9 @@ export class Game extends Scene {
                         onComplete: () => {
                             this.boss.destroy();
                             this.bossText.setVisible(false);
+                            // TRIGER FINALE DIRECTLY
+                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
+                            EventBus.emit('level-complete');
                         }
                     });
                 }
