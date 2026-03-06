@@ -352,18 +352,29 @@ export class Game extends Scene {
             trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
         });
 
-        // Finale: Boss Arena (5100)
-        // Villain Boss
-        this.bossText = this.add.text(5100, 300, 'VILLAIN BLOCKS THE PATH!\nPRESS F TO DEFEAT', {
+        // Finale: Boss Arena (5000 - 5800)
+        this.bossText = this.add.text(5400, 300, 'THE FINAL BUG DETECTED!\nPRESS F TO DEBUG', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ff0000', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
 
-        this.boss = this.physics.add.sprite(5100, 768 - 128, 'boss_placeholder');
+        // Visual Boss Health Bar (Retro style)
+        const healthBarBG = this.add.rectangle(5400, 360, 300, 20, 0x000000);
+        const healthBarFill = this.add.rectangle(5400, 360, 296, 16, 0x22c55e);
+        healthBarBG.setVisible(false);
+        healthBarFill.setVisible(false);
+        healthBarBG.setData('isBossUI', true);
+        healthBarFill.setData('isBossUI', true);
+
+        this.boss = this.physics.add.sprite(5400, 768 - 128, 'boss_placeholder');
         this.physics.add.collider(this.boss, this.platforms);
         this.boss.setImmovable(true);
-        // Boss acts like a wall, player can't walk past without killing him
         this.physics.add.collider(this.player, this.boss);
+
+        // Store UI refs on boss for easy access
+        this.boss.setData('text', this.bossText);
+        this.boss.setData('barBG', healthBarBG);
+        this.boss.setData('barFill', healthBarFill);
     }
 
     update() {
@@ -371,11 +382,11 @@ export class Game extends Scene {
             this.player.update();
 
             // Background Color Shift on Boss approach
-            if (this.player.x > 4500) {
-                const progress = Phaser.Math.Clamp((this.player.x - 4500) / 600, 0, 1);
-                // Interpolate from Sky Blue (#87CEEB) to Boss Red (#4a0404)
+            if (this.player.x > 4800) {
+                const progress = Phaser.Math.Clamp((this.player.x - 4800) / 600, 0, 1);
+                // Interpolate from Sky Blue (#87CEEB) to Deep Dark Void (#111111)
                 const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
-                const endColor = Phaser.Display.Color.HexStringToColor('#4a0404');
+                const endColor = Phaser.Display.Color.HexStringToColor('#111111');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
             } else {
