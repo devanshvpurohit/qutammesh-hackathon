@@ -378,7 +378,6 @@ export class Game extends Scene {
                 const endColor = Phaser.Display.Color.HexStringToColor('#4a0404');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
-                this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(red, green, blue));
             } else {
                 this.cameras.main.setBackgroundColor('#87CEEB');
             }
