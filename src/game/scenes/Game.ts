@@ -12,6 +12,7 @@ export class Game extends Scene {
     private bossText!: Phaser.GameObjects.Text;
     private bossDead: boolean = false;
     private fKey!: Phaser.Input.Keyboard.Key;
+    private inputActive: boolean = true;
 
     constructor() {
         super('Game');
@@ -170,6 +171,14 @@ export class Game extends Scene {
         const worldWidth = 6000;
         const worldHeight = 768; // matches config height
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+
+        // Input management for Modals
+        EventBus.on('modal-active', (active: boolean) => {
+            this.inputActive = !active;
+            if (this.input.keyboard) {
+                this.input.keyboard.enabled = !active;
+            }
+        });
 
         // Background (Parallax)
         this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue
@@ -393,6 +402,8 @@ export class Game extends Scene {
     }
 
     update() {
+        if (!this.inputActive) return;
+
         if (this.player) {
             this.player.update();
 

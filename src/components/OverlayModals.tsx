@@ -22,7 +22,10 @@ export const OverlayModals = () => {
         };
 
         const handleClose = (id: string) => {
-            setModals(prev => prev.filter(m => m.id !== id));
+            setModals(prev => {
+                const next = prev.filter(m => m.id !== id);
+                return next;
+            });
         };
 
         EventBus.on('open-modal', handleOpen);
@@ -33,6 +36,10 @@ export const OverlayModals = () => {
             EventBus.removeListener('close-modal');
         };
     }, []);
+
+    useEffect(() => {
+        EventBus.emit('modal-active', modals.length > 0);
+    }, [modals]);
 
     const closeAll = () => setModals([]);
 
