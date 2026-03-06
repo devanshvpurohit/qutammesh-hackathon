@@ -265,11 +265,9 @@ export class Game extends Scene {
             EventBus.emit('open-modal', { id: modalId, title, content });
         }
         else if (type === 'castle') {
-            if (upPressed) { // Enter castle door
-                trigger.lastTriggerTime = now;
-                EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
-                EventBus.emit('level-complete');
-            }
+            trigger.lastTriggerTime = now;
+            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
+            EventBus.emit('level-complete');
         }
     }
 
@@ -326,24 +324,34 @@ export class Game extends Scene {
             trigger.setData('content', scheduleContent[i]);
         }
 
-        // Zone 3: Tracks (3500 - 4500) - NOW USES BLOCKS
-        this.add.text(3800, 200, 'ZONE 3: TRACKS\nHit blocks for info', {
+        // Zone 3: Tracks (3500 - 4500) - NOW USES FLY EARTH BLOCKS IN W SHAPE
+        this.add.text(4000, 200, 'ZONE 3: TRACKS\nHit fly blocks', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
-        for (let i = 0; i < 4; i++) {
-            const blockX = 3600 + (i * 250);
-            const blockY = 550;
-            this.platforms.create(blockX, blockY, 'qblock_placeholder');
 
-            const trigger = this.triggers.create(blockX, blockY + 16, 'qblock_placeholder');
+        // Define W points relative to zone start (3600)
+        // A "W" shape using 5 points
+        const wPoints = [
+            { x: 3600, y: 500, contentIdx: 0 },
+            { x: 3800, y: 650, contentIdx: 1 },
+            { x: 4000, y: 500, contentIdx: 2 },
+            { x: 4200, y: 650, contentIdx: 3 },
+            { x: 4400, y: 500, contentIdx: 0 } // Duplicate or extra info
+        ];
+
+        wPoints.forEach((p, i) => {
+            // Using ground_placeholder for "earth block" look but floating
+            this.platforms.create(p.x, p.y, 'ground_placeholder');
+
+            const trigger = this.triggers.create(p.x, p.y + 16, 'qblock_placeholder');
             trigger.setVisible(false);
-            trigger.setData('type', 'qblock'); // Tracks are now in blocks
+            trigger.setData('type', 'qblock'); // Keep qblock type for hit-from-below behavior
             trigger.setData('modalId', 'track-' + i);
             trigger.setData('title', 'HACKATHON TRACK');
-            trigger.setData('content', tracksContent[i]);
-        }
+            trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
+        });
 
         // Finale: Castle (5500)
         this.add.text(5500, 300, 'FINAL CASTLE', {
