@@ -376,9 +376,8 @@ export class Game extends Scene {
                 // Interpolate from Sky Blue (#87CEEB) to Boss Red (#4a0404)
                 const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
                 const endColor = Phaser.Display.Color.HexStringToColor('#4a0404');
-                const red = Phaser.Math.Interpolation.Linear([startColor.r, endColor.r], progress);
-                const green = Phaser.Math.Interpolation.Linear([startColor.g, endColor.g], progress);
-                const blue = Phaser.Math.Interpolation.Linear([startColor.b, endColor.b], progress);
+                const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
+                this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(red, green, blue));
             } else {
                 this.cameras.main.setBackgroundColor('#87CEEB');
