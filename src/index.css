@@ -29,6 +29,21 @@
   box-shadow: 4px 4px 0px 0px var(--color-black, black);
 }
 
-.glow-text {
-  text-shadow: 0 0 10px rgba(74, 222, 128, 0.8), 0 0 20px rgba(74, 222, 128, 0.6);
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #000;
+  border: 2px solid #555;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-hackathon-primary);
+  border: 2px solid #000;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #22c55e;
 }

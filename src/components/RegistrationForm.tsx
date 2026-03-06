@@ -66,16 +66,41 @@ export const RegistrationForm = ({ isCredits }: RegistrationFormProps) => {
                         transition={{ delay: 2 }}
                         className="absolute bottom-4 left-0 right-0 bg-black/80 p-6 border-4 border-hackathon-primary"
                     >
-                        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs text-hackathon-secondary">TEAM NAME:</label>
-                                <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel text-xs outline-none focus:border-hackathon-primary" />
+                        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-2 overflow-y-auto max-h-[250px] pr-2 custom-scrollbar">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">TEAM NAME:</label>
+                                <input required type="text" className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary" />
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs text-hackathon-secondary">EMAIL:</label>
-                                <input required type="email" className="bg-black border-2 border-white p-2 text-white font-pixel text-xs outline-none focus:border-hackathon-primary" />
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">TEAM LEAD:</label>
+                                <input required type="text" className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary" />
                             </div>
-                            <button type="submit" className="pixel-btn bg-hackathon-primary text-black py-2">SUBMIT TO DIMENSION</button>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">CONTACT NUMBER:</label>
+                                <input required type="tel" className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary" />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">MEMBERS NAMES:</label>
+                                <textarea required className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary h-12 resize-none" placeholder="Name 1, Name 2, ..."></textarea>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">MEMBERS EMAIL IDS:</label>
+                                <textarea required className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary h-12 resize-none" placeholder="Email 1, Email 2, ..."></textarea>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">TRACK:</label>
+                                <select className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary">
+                                    <option>AI / MACHINE LEARNING</option>
+                                    <option>WEB3 / BLOCKCHAIN</option>
+                                    <option>CLIMATE TECH</option>
+                                    <option>OPEN INNOVATION</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-hackathon-secondary">COLLEGE:</label>
+                                <input required type="text" className="bg-black border border-white p-1 text-white font-pixel text-[10px] outline-none focus:border-hackathon-primary" />
+                            </div>
+                            <button type="submit" className="pixel-btn bg-hackathon-primary text-black py-1 mt-2 text-[10px] sticky bottom-0">SUBMIT TO DIMENSION</button>
                         </form>
                     </motion.div>
                 ) : (
@@ -91,19 +116,53 @@ export const RegistrationForm = ({ isCredits }: RegistrationFormProps) => {
     }
 
     return (
-        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-4 mt-4 text-left">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col gap-4 mt-4 text-left max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
             {!isSubmitted ? (
                 <>
                     <p className="text-gray-300 text-sm mb-4">You have reached the final castle. Enter your details to secure your spot at Quantum Mesh 2026.</p>
-                    <div className="flex flex-col gap-2">
-                        <label className="text-sm text-hackathon-secondary">Team Name:</label>
-                        <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm text-hackathon-secondary">Team Name:</label>
+                            <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm text-hackathon-secondary">Team Lead Name:</label>
+                            <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+                        </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                        <label className="text-sm text-hackathon-secondary">Email:</label>
-                        <input required type="email" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm text-hackathon-secondary">College / Institution:</label>
+                            <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm text-hackathon-secondary">Contact Number:</label>
+                            <input required type="tel" className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary" />
+                        </div>
                     </div>
-                    <button type="submit" className="pixel-btn mt-6 bg-hackathon-primary text-black">SUBMIT QUEST</button>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm text-hackathon-secondary">Members Names (separated by commas):</label>
+                        <textarea required className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary h-24 resize-none" placeholder="Name 1, Name 2, Name 3"></textarea>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm text-hackathon-secondary">Team Members Email IDs (separated by commas):</label>
+                        <textarea required className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary h-24 resize-none" placeholder="email1@example.com, email2@example.com"></textarea>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-sm text-hackathon-secondary">Select Track:</label>
+                        <select className="bg-black border-2 border-white p-2 text-white font-pixel outline-none focus:border-hackathon-primary">
+                            <option>AI / Machine Learning</option>
+                            <option>Web3 / Blockchain</option>
+                            <option>Climate Tech</option>
+                            <option>Open Innovation</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" className="pixel-btn mt-6 bg-hackathon-primary text-black sticky bottom-0">SUBMIT QUEST</button>
                 </>
             ) : (
                 <div className="text-center py-8">
