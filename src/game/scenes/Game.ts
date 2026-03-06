@@ -252,6 +252,15 @@ export class Game extends Scene {
                 });
             }
         }
+        else if (type === 'trackblock') {
+            // Omni-directional trigger for zone 3
+            trigger.lastTriggerTime = now;
+            trigger.disableBody(true, false); // Keep it from triggering again instantly
+            EventBus.emit('open-modal', { id: modalId, title, content });
+
+            this.score += 100;
+            EventBus.emit('update-score', this.score);
+        }
         else if (type === 'pipe') {
             if (downPressed) { // Enter pipe
                 trigger.lastTriggerTime = now;
@@ -344,29 +353,31 @@ export class Game extends Scene {
             // Using ground_placeholder for "earth block" look but floating
             this.platforms.create(p.x, p.y, 'ground_placeholder');
 
-            const trigger = this.triggers.create(p.x, p.y + 16, 'qblock_placeholder');
+            const trigger = this.triggers.create(p.x, p.y, 'qblock_placeholder');
+            trigger.setScale(1.5);
+            trigger.refreshBody();
             trigger.setVisible(false);
-            trigger.setData('type', 'qblock'); // Keep qblock type for hit-from-below behavior
+            trigger.setData('type', 'trackblock'); // Omni-collision trigger
             trigger.setData('modalId', 'track-' + i);
             trigger.setData('title', 'HACKATHON TRACK');
             trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
         });
 
-        // Finale: Boss Arena (5000 - 5800)
-        this.bossText = this.add.text(5400, 300, 'THE FINAL BUG DETECTED!\nPRESS F TO DEBUG', {
+        // Finale: Boss Arena (4800)
+        this.bossText = this.add.text(4800, 300, 'THE FINAL BUG DETECTED!\nPRESS F TO DEBUG', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ff0000', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
 
         // Visual Boss Health Bar (Retro style)
-        const healthBarBG = this.add.rectangle(5400, 360, 300, 20, 0x000000);
-        const healthBarFill = this.add.rectangle(5400, 360, 296, 16, 0x22c55e);
+        const healthBarBG = this.add.rectangle(4800, 360, 300, 20, 0x000000);
+        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0x22c55e);
         healthBarBG.setVisible(false);
         healthBarFill.setVisible(false);
         healthBarBG.setData('isBossUI', true);
         healthBarFill.setData('isBossUI', true);
 
-        this.boss = this.physics.add.sprite(5400, 768 - 128, 'boss_placeholder');
+        this.boss = this.physics.add.sprite(4800, 768 - 128, 'boss_placeholder');
         this.physics.add.collider(this.boss, this.platforms);
         this.boss.setImmovable(true);
         this.physics.add.collider(this.player, this.boss);
@@ -382,8 +393,8 @@ export class Game extends Scene {
             this.player.update();
 
             // Background Color Shift on Boss approach
-            if (this.player.x > 4800) {
-                const progress = Phaser.Math.Clamp((this.player.x - 4800) / 600, 0, 1);
+            if (this.player.x > 4300) {
+                const progress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
                 // Interpolate from Sky Blue (#87CEEB) to Deep Dark Void (#111111)
                 const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
                 const endColor = Phaser.Display.Color.HexStringToColor('#111111');
@@ -397,13 +408,21 @@ export class Game extends Scene {
         // Boss interaction loop
         if (this.player && this.boss && !this.bossDead) {
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
-            if (dist < 300) {
-                this.bossText.setVisible(true);
+            const uiText = this.boss.getData('text');
+            const barBG = this.boss.getData('barBG');
+            const barFill = this.boss.getData('barFill');
+
+            // Show UI when close
+            if (dist < 400) {
+                if (uiText) uiText.setVisible(true);
+                if (barBG) barBG.setVisible(true);
+                if (barFill) barFill.setVisible(true);
 
                 // If in range and F is pressed
                 if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
                     this.bossDead = true;
-                    this.bossText.setText('BUG DEFEATED!');
+                    if (uiText) uiText.setText('DEBUGGING SUCCESSFUL!');
+                    if (barFill) barFill.setScale(0, 1); // Empty health bar
                     this.boss.body!.checkCollision.none = true; // allow walking through
 
                     // Kill boss animation
@@ -411,13 +430,16 @@ export class Game extends Scene {
                         targets: this.boss,
                         y: this.boss.y - 400,
                         alpha: 0,
-                        angle: 360,
-                        duration: 1000,
+                        angle: 720,
+                        duration: 1200,
                         scaleX: 0,
                         scaleY: 0,
                         onComplete: () => {
                             this.boss.destroy();
-                            this.bossText.setVisible(false);
+                            if (uiText) uiText.setVisible(false);
+                            if (barBG) barBG.setVisible(false);
+                            if (barFill) barFill.setVisible(false);
+
                             // TRIGER FINALE DIRECTLY
                             EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
                             EventBus.emit('level-complete');
@@ -425,7 +447,9 @@ export class Game extends Scene {
                     });
                 }
             } else {
-                this.bossText.setVisible(false);
+                if (uiText) uiText.setVisible(false);
+                if (barBG) barBG.setVisible(false);
+                if (barFill) barFill.setVisible(false);
             }
         }
 
