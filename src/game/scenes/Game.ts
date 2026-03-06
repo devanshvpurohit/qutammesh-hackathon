@@ -223,7 +223,6 @@ export class Game extends Scene {
 
         // Key checks
         const cursors = this.player.getCursors();
-        const upPressed = cursors.up.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W).isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.UP).isDown;
         const downPressed = cursors.down.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S).isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN).isDown;
 
         // Throttle emission to prevent React spam
@@ -393,6 +392,13 @@ export class Game extends Scene {
         this.boss.setImmovable(true);
         // Boss acts like a wall, player can't walk past without killing him
         this.physics.add.collider(this.player, this.boss);
+
+        // Castle Trigger (Automatic) - Positioned in front of the castle door
+        const castleTrigger = this.triggers.create(5400, 768 - 128, 'qblock_placeholder');
+        castleTrigger.setScale(3, 5); // Make it a large detection zone
+        castleTrigger.setVisible(false);
+        castleTrigger.refreshBody(); // Static bodies need refresh after scale
+        castleTrigger.setData('type', 'castle');
     }
 
     update() {
@@ -409,23 +415,21 @@ export class Game extends Scene {
                 // If in range and F is pressed
                 if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
                     this.bossDead = true;
-                    this.bossText.setVisible(false);
+                    this.bossText.setText('BUG DEFEATED!');
                     this.boss.body!.checkCollision.none = true; // allow walking through
-                    this.cameras.main.stopFollow(); // Stop camera from following player
+
                     // Kill boss animation
                     this.tweens.add({
                         targets: this.boss,
-                        y: this.boss.y - 200,
+                        y: this.boss.y - 400,
                         alpha: 0,
-                        angle: 180,
-                        duration: 1500,
+                        angle: 360,
+                        duration: 1000,
                         scaleX: 0,
                         scaleY: 0,
                         onComplete: () => {
                             this.boss.destroy();
-                            // End credits style registration popup
-                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
-                            EventBus.emit('level-complete');
+                            this.bossText.setVisible(false);
                         }
                     });
                 }
