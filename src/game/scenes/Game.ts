@@ -142,27 +142,27 @@ export class Game extends Scene {
             "................................"
         ], 8);
 
-        // Boss Sprite
+        // Boss Sprite: NANO BANANA
         this.generatePixelArt('boss_placeholder', {
-            '0': 0x000000, '1': 0x22c55e, '2': 0xfacc15, '3': 0xef4444, '4': 0xffffff
+            '0': 0x000000, '1': 0xfacc15, '2': 0xca8a04, '3': 0xef4444, '4': 0xffffff
         }, [
-            "....00000000....",
-            "...0111111110...",
-            "..011041110410..",
-            ".01110411104110.",
-            ".01111111111110.",
-            "0222222222222220",
-            "0202222222222020",
-            "0202222222222020",
-            "0222222222222220",
-            ".03333333333330.",
-            ".03303333330330.",
-            "..030033330030..",
-            "...0000000000...",
-            "....0.0..0.0....",
-            "...00.0..0.00...",
-            "...0..0..0..0..."
-        ], 8);
+            "......000.......",
+            ".....0220.......",
+            "....01110.......",
+            "...011110.......",
+            "..0114010.......",
+            ".01110010.......",
+            ".0111110........",
+            "01111110........",
+            "01111110........",
+            "01111110........",
+            ".0111110........",
+            "..01110.........",
+            "...0110.........",
+            "....0220........",
+            ".....000........",
+            "................"
+        ], 16);
     }
 
     create() {
@@ -350,11 +350,14 @@ export class Game extends Scene {
         ];
 
         wPoints.forEach((p, i) => {
-            // Using ground_placeholder for "earth block" look but floating
-            this.platforms.create(p.x, p.y, 'ground_placeholder');
+            // Make platform solid visual
+            const platform = this.platforms.create(p.x, p.y, 'ground_placeholder');
+            platform.setScale(1.5);
+            platform.refreshBody();
 
+            // Make trigger significantly larger than platform
             const trigger = this.triggers.create(p.x, p.y, 'qblock_placeholder');
-            trigger.setScale(1.5);
+            trigger.setScale(2.5); // Oversized to ensure player overlaps coming from side or top
             trigger.refreshBody();
             trigger.setVisible(false);
             trigger.setData('type', 'trackblock'); // Omni-collision trigger
@@ -364,20 +367,21 @@ export class Game extends Scene {
         });
 
         // Finale: Boss Arena (4800)
-        this.bossText = this.add.text(4800, 300, 'THE FINAL BUG DETECTED!\nPRESS F TO DEBUG', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ff0000', align: 'center'
+        this.bossText = this.add.text(4800, 300, 'NANO BANANA BLOCKS THE PATH!\nPRESS F TO DEFEAT', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#facc15', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
 
         // Visual Boss Health Bar (Retro style)
         const healthBarBG = this.add.rectangle(4800, 360, 300, 20, 0x000000);
-        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0x22c55e);
+        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0xef4444);
         healthBarBG.setVisible(false);
         healthBarFill.setVisible(false);
         healthBarBG.setData('isBossUI', true);
         healthBarFill.setData('isBossUI', true);
 
-        this.boss = this.physics.add.sprite(4800, 768 - 128, 'boss_placeholder');
+        this.boss = this.physics.add.sprite(4800, 600, 'boss_placeholder');
+        (this.boss.body as Phaser.Physics.Arcade.Body).allowGravity = false; // Won't fall through floor
         this.physics.add.collider(this.boss, this.platforms);
         this.boss.setImmovable(true);
         this.physics.add.collider(this.player, this.boss);
@@ -421,7 +425,7 @@ export class Game extends Scene {
                 // If in range and F is pressed
                 if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
                     this.bossDead = true;
-                    if (uiText) uiText.setText('DEBUGGING SUCCESSFUL!');
+                    if (uiText) uiText.setText('BANANA PEEL SLIPPED!');
                     if (barFill) barFill.setScale(0, 1); // Empty health bar
                     this.boss.body!.checkCollision.none = true; // allow walking through
 
