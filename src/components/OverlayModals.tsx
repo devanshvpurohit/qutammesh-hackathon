@@ -62,9 +62,9 @@ export const OverlayModals = () => {
                                     <X size={24} className="stroke-[3]" />
                                 </button>
 
-                                <h2 className="text-2xl text-hackathon-primary mb-4">{modal.title}</h2>
-                                {modal.id === 'register' ? (
-                                    <RegistrationForm />
+                                <h2 className="text-2xl text-hackathon-primary mb-4">{modal.id === 'credits' ? 'MISSION ACCOMPLISHED' : modal.title}</h2>
+                                {(modal.id === 'register' || modal.id === 'credits') ? (
+                                    <RegistrationForm isCredits={modal.id === 'credits'} />
                                 ) : (
                                     <p className="text-sm leading-relaxed">{modal.content}</p>
                                 )}

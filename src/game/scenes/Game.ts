@@ -8,6 +8,10 @@ export class Game extends Scene {
     private backgroundClouds!: Phaser.GameObjects.TileSprite;
     private triggers!: Phaser.Physics.Arcade.StaticGroup;
     private score: number = 0;
+    private boss!: Phaser.Physics.Arcade.Sprite;
+    private bossText!: Phaser.GameObjects.Text;
+    private bossDead: boolean = false;
+    private fKey!: Phaser.Input.Keyboard.Key;
 
     constructor() {
         super('Game');
@@ -132,6 +136,28 @@ export class Game extends Scene {
             ".01111111111110.",
             "..000000000000.."
         ], 8);
+
+        // Boss Sprite
+        this.generatePixelArt('boss_placeholder', {
+            '0': 0x000000, '1': 0x22c55e, '2': 0xfacc15, '3': 0xef4444, '4': 0xffffff
+        }, [
+            "....00000000....",
+            "...0111111110...",
+            "..011041110410..",
+            ".01110411104110.",
+            ".01111111111110.",
+            "0222222222222220",
+            "0202222222222020",
+            "0202222222222020",
+            "0222222222222220",
+            ".03333333333330.",
+            ".03303333330330.",
+            "..030033330030..",
+            "...0000000000...",
+            "....0.0..0.0....",
+            "...00.0..0.00...",
+            "...0..0..0..0..."
+        ], 8);
     }
 
     create() {
@@ -174,6 +200,10 @@ export class Game extends Scene {
 
         // Create the zones
         this.buildZones();
+
+        if (this.input.keyboard) {
+            this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+        }
 
         EventBus.emit('current-scene-ready', this);
     }
@@ -255,15 +285,38 @@ export class Game extends Scene {
             trigger.setData('content', aboutContent[i]);
         }
 
-        // Zone 2: Tracks (2200 - 3200)
-        this.add.text(2500, 300, 'ZONE 2: TRACKS\nPress DOWN on pipe', {
+        // Zone 2: Schedule (Hill-like) (2200 - 3200)
+        this.add.text(2500, 300, 'ZONE 2: SCHEDULE\nClimb the hills', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        }).setOrigin(0.5);
+
+        const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
+        for (let i = 0; i < 5; i++) {
+            const platX = 2300 + (i * 200);
+            const height = i < 3 ? i : 4 - i; // Modulates height: 0, 1, 2, 1, 0
+            const platY = (768 - 64) - (height * 64);
+
+            // Build column down to floor
+            for (let j = 0; j <= height + 1; j++) {
+                this.platforms.create(platX, (768 - 64) - (j * 64), 'ground_placeholder');
+            }
+
+            const trigger = this.triggers.create(platX, platY - 40, 'qblock_placeholder');
+            trigger.setVisible(false);
+            trigger.setData('type', 'schedule');
+            trigger.setData('modalId', 'schedule-' + i);
+            trigger.setData('content', scheduleContent[i]);
+        }
+
+        // Zone 3: Tracks (3500 - 4500)
+        this.add.text(3800, 200, 'ZONE 3: TRACKS\nPress DOWN on pipe', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
         // Add pipes
         for (let i = 0; i < 4; i++) {
-            const pipeX = 2300 + (i * 250);
+            const pipeX = 3600 + (i * 250);
             const pipeY = 768 - 64; // Adjusted to match 64x64 pipe size
             this.platforms.create(pipeX, pipeY, 'pipe_placeholder');
 
@@ -275,27 +328,6 @@ export class Game extends Scene {
             trigger.setData('type', 'pipe');
             trigger.setData('modalId', 'track-' + i);
             trigger.setData('content', tracksContent[i]);
-        }
-
-        // Zone 3: Schedule (3500 - 4500)
-        this.add.text(3800, 200, 'ZONE 3: SCHEDULE', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
-        }).setOrigin(0.5);
-
-        const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
-        for (let i = 0; i < 5; i++) {
-            const platX = 3600 + (i * 150);
-            const platY = (768 - 64) - (i * 64);
-            // Build column down to floor
-            for (let j = 0; j <= i + 1; j++) {
-                this.platforms.create(platX, (768 - 64) - (j * 64), 'ground_placeholder');
-            }
-
-            const trigger = this.triggers.create(platX, platY - 40, 'qblock_placeholder');
-            trigger.setVisible(false);
-            trigger.setData('type', 'schedule');
-            trigger.setData('modalId', 'schedule-' + i);
-            trigger.setData('content', scheduleContent[i]);
         }
 
         // Finale: Castle (5500)
@@ -327,15 +359,56 @@ export class Game extends Scene {
 
         this.platforms.create(5500, 768 - 160, 'castle_placeholder');
 
-        // Castle door trigger - make it massive so the user just has to walk into the castle
-        const castleTrigger = this.triggers.create(5500, 768 - 150, 'qblock_placeholder').setScale(10, 8);
-        castleTrigger.setVisible(false);
-        castleTrigger.setData('type', 'castle');
+        // Villain Boss
+        this.bossText = this.add.text(5100, 300, 'Villain blocks the path!\nPRESS F TO DEFEAT', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#ff0000', align: 'center'
+        }).setOrigin(0.5);
+        this.bossText.setVisible(false);
+
+        this.boss = this.physics.add.sprite(5100, 768 - 128, 'boss_placeholder');
+        this.physics.add.collider(this.boss, this.platforms);
+        this.boss.setImmovable(true);
+        // Boss acts like a wall, player can't walk past without killing him
+        this.physics.add.collider(this.player, this.boss);
     }
 
     update() {
         if (this.player) {
             this.player.update();
+        }
+
+        // Boss interaction loop
+        if (this.player && this.boss && !this.bossDead) {
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
+            if (dist < 300) {
+                this.bossText.setVisible(true);
+
+                // If in range and F is pressed
+                if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
+                    this.bossDead = true;
+                    this.bossText.setVisible(false);
+                    this.boss.body!.checkCollision.none = true; // allow walking through
+                    this.cameras.main.stopFollow(); // Stop camera from following player
+                    // Kill boss animation
+                    this.tweens.add({
+                        targets: this.boss,
+                        y: this.boss.y - 200,
+                        alpha: 0,
+                        angle: 180,
+                        duration: 1500,
+                        scaleX: 0,
+                        scaleY: 0,
+                        onComplete: () => {
+                            this.boss.destroy();
+                            // End credits style registration popup
+                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
+                            EventBus.emit('level-complete');
+                        }
+                    });
+                }
+            } else {
+                this.bossText.setVisible(false);
+            }
         }
 
         // Parallax effect on clouds

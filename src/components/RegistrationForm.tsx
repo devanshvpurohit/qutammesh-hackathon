@@ -1,16 +1,88 @@
 import { useState } from 'react';
 import { EventBus } from '../game/EventBus';
+import { motion } from 'framer-motion';
 
-export const RegistrationForm = () => {
+interface RegistrationFormProps {
+    isCredits?: boolean;
+}
+
+export const RegistrationForm = ({ isCredits }: RegistrationFormProps) => {
     const [isSubmitted, setIsSubmitted] = useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitted(true);
         setTimeout(() => {
-            EventBus.emit('close-modal', 'register');
+            EventBus.emit('close-modal', isCredits ? 'credits' : 'register');
         }, 3000);
     };
+
+    if (isCredits) {
+        return (
+            <div className="relative overflow-hidden h-[400px] flex flex-col items-center">
+                <motion.div
+                    initial={{ y: 400 }}
+                    animate={{ y: -600 }}
+                    transition={{ duration: 15, ease: "linear" }}
+                    className="flex flex-col items-center gap-12 text-center"
+                >
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-3xl text-hackathon-primary">QUANTUM MESH</h3>
+                        <p className="text-xl">A Journey Through Code</p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <p className="text-hackathon-secondary text-sm">DESIGNED BY</p>
+                        <p className="text-lg">ANTIGRAVITY AI</p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <p className="text-hackathon-secondary text-sm">ENHANCED BY</p>
+                        <p className="text-lg">THE USER</p>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <p className="text-hackathon-secondary text-sm">SPECIAL THANKS</p>
+                        <p className="text-lg text-white">PHASER ENGINE</p>
+                        <p className="text-lg text-white">REACT CORE TEAM</p>
+                    </div>
+
+                    <div className="mt-12">
+                        <h4 className="text-2xl text-hackathon-primary mb-4">THE FUTURE AWAITS</h4>
+                    </div>
+                </motion.div>
+
+                {!isSubmitted ? (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 2 }}
+                        className="absolute bottom-4 left-0 right-0 bg-black/80 p-6 border-4 border-hackathon-primary"
+                    >
+                        <p className="text-hackathon-secondary text-xs mb-4 text-center">JOIN THE FINAL STAND</p>
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs text-hackathon-secondary">TEAM NAME:</label>
+                                <input required type="text" className="bg-black border-2 border-white p-2 text-white font-pixel text-xs outline-none focus:border-hackathon-primary" />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs text-hackathon-secondary">EMAIL:</label>
+                                <input required type="email" className="bg-black border-2 border-white p-2 text-white font-pixel text-xs outline-none focus:border-hackathon-primary" />
+                            </div>
+                            <button type="submit" className="pixel-btn bg-hackathon-primary text-black py-2">REGISTER FOR REALITY</button>
+                        </form>
+                    </motion.div>
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+                        <div className="text-center">
+                            <h3 className="text-2xl text-hackathon-primary mb-2">QUEST ACCEPTED!</h3>
+                            <p className="text-white">SEE YOU IN THE NEXT DIMENSION.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4 text-left">
