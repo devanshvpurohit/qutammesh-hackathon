@@ -143,27 +143,27 @@ export class Game extends Scene {
             "................................"
         ], 8);
 
-        // Boss Sprite: NANO BANANA
+        // Boss Sprite: THE GLITCH OVERLORD
         this.generatePixelArt('boss_placeholder', {
-            '0': 0x000000, '1': 0xfacc15, '2': 0xca8a04, '3': 0xef4444, '4': 0xffffff
+            '0': 0x000000, '1': 0x06b6d4, '2': 0x8b5cf6, '3': 0xef4444, '4': 0xffffff
         }, [
-            "......000.......",
-            ".....0220.......",
-            "....01110.......",
-            "...011110.......",
-            "..0114010.......",
-            ".01110010.......",
-            ".0111110........",
-            "01111110........",
-            "01111110........",
-            "01111110........",
-            ".0111110........",
-            "..01110.........",
-            "...0110.........",
-            "....0220........",
-            ".....000........",
-            "................"
-        ], 16);
+            "....00000000....",
+            "...0111111110...",
+            "..012222222210..",
+            ".01244111144210.",
+            ".01244111144210.",
+            "011222222222110",
+            "011111111111110",
+            "011111111111110",
+            ".0333333333330.",
+            "..03333333330..",
+            "...000000000...",
+            "....03.0.30....",
+            "....0..0..0....",
+            "...............",
+            "...............",
+            "..............."
+        ], 12);
     }
 
     create() {
@@ -376,21 +376,21 @@ export class Game extends Scene {
         });
 
         // Finale: Boss Arena (4800)
-        this.bossText = this.add.text(4800, 300, 'NANO BANANA BLOCKS THE PATH!\nPRESS F TO DEFEAT', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#facc15', align: 'center'
+        this.bossText = this.add.text(4800, 300, 'THE GLITCH OVERLORD APPEARS!\nPRESS F TO PURGE', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#06b6d4', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
 
         // Visual Boss Health Bar (Retro style)
         const healthBarBG = this.add.rectangle(4800, 360, 300, 20, 0x000000);
-        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0xef4444);
+        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0x8b5cf6);
         healthBarBG.setVisible(false);
         healthBarFill.setVisible(false);
         healthBarBG.setData('isBossUI', true);
         healthBarFill.setData('isBossUI', true);
 
         this.boss = this.physics.add.sprite(4800, 600, 'boss_placeholder');
-        (this.boss.body as Phaser.Physics.Arcade.Body).allowGravity = false; // Won't fall through floor
+        (this.boss.body as Phaser.Physics.Arcade.Body).allowGravity = false;
         this.physics.add.collider(this.boss, this.platforms);
         this.boss.setImmovable(true);
         this.physics.add.collider(this.player, this.boss);
@@ -436,7 +436,7 @@ export class Game extends Scene {
                 // If in range and F is pressed
                 if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
                     this.bossDead = true;
-                    if (uiText) uiText.setText('BANANA PEEL SLIPPED!');
+                    if (uiText) uiText.setText('SYSTEM STABILIZED!');
                     if (barFill) barFill.setScale(0, 1); // Empty health bar
                     this.boss.body!.checkCollision.none = true; // allow walking through
 
