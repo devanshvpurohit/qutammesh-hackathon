@@ -5,6 +5,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private speed: number = 250;
     private jumpHeight: number = -600;
 
+    public getCursors() {
+        return this.cursors;
+    }
+
     constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
         super(scene, x, y, texture);
 

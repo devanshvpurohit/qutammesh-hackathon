@@ -121,20 +121,25 @@ export class Game extends Scene {
             ".01111311111110."
         ], 4);
 
-        // Cloud (16x12)
+        // Cloud (32x24 for more spacing)
         this.generatePixelArt('cloud_placeholder', {
             '0': 0xffffff, '1': 0xe0e7ff
         }, [
-            "......000.......",
-            ".....00000......",
-            "....0001000.....",
-            "..00001110000...",
-            ".0000111110000..",
-            "001111111111000.",
-            "0111111111111100",
-            "0111111111111110",
-            ".01111111111110.",
-            "..000000000000.."
+            "................................",
+            "................................",
+            "..............000...............",
+            ".............00000..............",
+            "............0001000.............",
+            "..........00001110000...........",
+            ".........0000111110000..........",
+            "........001111111111000.........",
+            "........0111111111111100........",
+            "........0111111111111110........",
+            ".........01111111111110.........",
+            "..........000000000000..........",
+            "................................",
+            "................................",
+            "................................"
         ], 8);
 
         // Boss Sprite
@@ -213,17 +218,24 @@ export class Game extends Scene {
 
         const type = trigger.getData('type');
         const modalId = trigger.getData('modalId');
+        const title = trigger.getData('title') || 'INFO';
+        const content = trigger.getData('content');
+
+        // Key checks
+        const cursors = this.player.getCursors();
+        const upPressed = cursors.up.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.W).isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.UP).isDown;
+        const downPressed = cursors.down.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S).isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN).isDown;
 
         // Throttle emission to prevent React spam
         const now = this.time.now;
         if (trigger.lastTriggerTime && now - trigger.lastTriggerTime < 2000) {
             return;
         }
-        trigger.lastTriggerTime = now;
 
         if (type === 'qblock') {
             // Only trigger if hit from below
             if (player.body.velocity.y < 0 && player.body.y > trigger.y) {
+                trigger.lastTriggerTime = now;
                 // Bounce block effect
                 this.tweens.add({
                     targets: trigger,
@@ -232,7 +244,7 @@ export class Game extends Scene {
                     duration: 100,
                     onComplete: () => {
                         trigger.setTint(0xcccccc); // grey out
-                        EventBus.emit('open-modal', { id: modalId, title: 'ABOUT', content: trigger.getData('content') });
+                        EventBus.emit('open-modal', { id: modalId, title, content });
 
                         this.score += 100;
                         EventBus.emit('update-score', this.score);
@@ -242,18 +254,22 @@ export class Game extends Scene {
             }
         }
         else if (type === 'pipe') {
-            const isDown = player.cursors.down.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S).isDown;
-            if (isDown) { // Enter pipe
-                EventBus.emit('open-modal', { id: modalId, title: 'HACKATHON TRACK', content: trigger.getData('content') });
+            if (downPressed) { // Enter pipe
+                trigger.lastTriggerTime = now;
+                EventBus.emit('open-modal', { id: modalId, title, content });
                 player.setPosition(player.x, player.y - 100); // Popup effect
             }
         }
         else if (type === 'schedule') {
-            EventBus.emit('open-modal', { id: modalId, title: 'SCHEDULE', content: trigger.getData('content') });
+            trigger.lastTriggerTime = now;
+            EventBus.emit('open-modal', { id: modalId, title, content });
         }
         else if (type === 'castle') {
-            EventBus.emit('open-modal', { id: 'register', title: 'REGISTER NOW', content: 'You completed the level!' });
-            EventBus.emit('level-complete');
+            if (upPressed) { // Enter castle door
+                trigger.lastTriggerTime = now;
+                EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
+                EventBus.emit('level-complete');
+            }
         }
     }
 
@@ -282,51 +298,50 @@ export class Game extends Scene {
             trigger.setVisible(false);
             trigger.setData('type', 'qblock');
             trigger.setData('modalId', 'about-' + i);
+            trigger.setData('title', 'ABOUT');
             trigger.setData('content', aboutContent[i]);
         }
 
-        // Zone 2: Schedule (Hill-like) (2200 - 3200)
-        this.add.text(2500, 300, 'ZONE 2: SCHEDULE\nClimb the hills', {
+        // Zone 2: Schedule (Hill-like) (2200 - 3200) - NOW USES PIPES
+        this.add.text(2500, 300, 'ZONE 2: SCHEDULE\nEnter the pipes', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
         const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
         for (let i = 0; i < 5; i++) {
-            const platX = 2300 + (i * 200);
+            const pipeX = 2300 + (i * 200);
             const height = i < 3 ? i : 4 - i; // Modulates height: 0, 1, 2, 1, 0
-            const platY = (768 - 64) - (height * 64);
+            const pipeY = (768 - 64) - (height * 64);
 
             // Build column down to floor
-            for (let j = 0; j <= height + 1; j++) {
-                this.platforms.create(platX, (768 - 64) - (j * 64), 'ground_placeholder');
+            for (let j = 0; j <= height; j++) {
+                this.platforms.create(pipeX, (768 - 64) - (j * 64), 'pipe_placeholder');
             }
 
-            const trigger = this.triggers.create(platX, platY - 40, 'qblock_placeholder');
+            const trigger = this.triggers.create(pipeX, pipeY - 64, 'qblock_placeholder');
             trigger.setVisible(false);
-            trigger.setData('type', 'schedule');
+            trigger.setData('type', 'pipe'); // Schedule is now in pipes
             trigger.setData('modalId', 'schedule-' + i);
+            trigger.setData('title', 'SCHEDULE');
             trigger.setData('content', scheduleContent[i]);
         }
 
-        // Zone 3: Tracks (3500 - 4500)
-        this.add.text(3800, 200, 'ZONE 3: TRACKS\nPress DOWN on pipe', {
+        // Zone 3: Tracks (3500 - 4500) - NOW USES BLOCKS
+        this.add.text(3800, 200, 'ZONE 3: TRACKS\nHit blocks for info', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
-        // Add pipes
         for (let i = 0; i < 4; i++) {
-            const pipeX = 3600 + (i * 250);
-            const pipeY = 768 - 64; // Adjusted to match 64x64 pipe size
-            this.platforms.create(pipeX, pipeY, 'pipe_placeholder');
+            const blockX = 3600 + (i * 250);
+            const blockY = 550;
+            this.platforms.create(blockX, blockY, 'qblock_placeholder');
 
-            // Add a second pipe block to make it taller
-            this.platforms.create(pipeX, pipeY - 64, 'pipe_placeholder');
-
-            const trigger = this.triggers.create(pipeX, pipeY - 128, 'qblock_placeholder'); // trigger box above pipe
+            const trigger = this.triggers.create(blockX, blockY + 16, 'qblock_placeholder');
             trigger.setVisible(false);
-            trigger.setData('type', 'pipe');
+            trigger.setData('type', 'qblock'); // Tracks are now in blocks
             trigger.setData('modalId', 'track-' + i);
+            trigger.setData('title', 'HACKATHON TRACK');
             trigger.setData('content', tracksContent[i]);
         }
 
