@@ -14,6 +14,25 @@ export class Game extends Scene {
     private fKey!: Phaser.Input.Keyboard.Key;
     private inputActive: boolean = true;
 
+    // NEW: Game systems
+    private playerHP: number = 3;
+    private playerMaxHP: number = 3;
+    private invincible: boolean = false;
+    private hearts: Phaser.GameObjects.Text[] = [];
+    private coins!: Phaser.Physics.Arcade.Group;
+    private coinCount: number = 0;
+    private coinText!: Phaser.GameObjects.Text;
+    private enemies!: Phaser.Physics.Arcade.Group;
+    private bossHP: number = 5;
+    private bossMaxHP: number = 5;
+    private bossPhase: number = 1;
+    private bossProjectiles!: Phaser.Physics.Arcade.Group;
+    private bossAttackTimer!: Phaser.Time.TimerEvent;
+    private bossCharging: boolean = false;
+    private bossHealthBarBG!: Phaser.GameObjects.Rectangle;
+    private bossHealthBarFill!: Phaser.GameObjects.Rectangle;
+    private bossNameText!: Phaser.GameObjects.Text;
+
     constructor() {
         super('Game');
     }
@@ -152,24 +171,68 @@ export class Game extends Scene {
             "..012222222210..",
             ".01244111144210.",
             ".01244111144210.",
-            "011222222222110",
-            "011111111111110",
-            "011111111111110",
-            ".0333333333330.",
-            "..03333333330..",
-            "...000000000...",
-            "....03.0.30....",
-            "....0..0..0....",
-            "...............",
-            "...............",
-            "..............."
+            "011222222222110.",
+            "011111111111110.",
+            "011111111111110.",
+            ".0333333333330..",
+            "..03333333330...",
+            "...000000000....",
+            "....03.0.30.....",
+            "....0..0..0.....",
+            "................",
+            "................",
+            "................"
         ], 12);
+
+        // Coin (8x8)
+        this.generatePixelArt('coin', {
+            '0': 0x000000, '1': 0xfacc15, '2': 0xfef08a, '3': 0xca8a04
+        }, [
+            "..0000..",
+            ".013310.",
+            "01233210",
+            "01233210",
+            "01233210",
+            "01233210",
+            ".013310.",
+            "..0000.."
+        ], 4);
+
+        // Enemy Goomba-like (12x12)
+        this.generatePixelArt('enemy', {
+            '0': 0x000000, '1': 0xef4444, '2': 0xffffff, '3': 0x991b1b
+        }, [
+            "....0000....",
+            "...011110...",
+            "..01111110..",
+            ".0113111310.",
+            ".0112011200.",
+            "..01111110..",
+            "...011110...",
+            "..03333330..",
+            ".0333333300.",
+            ".0300000030.",
+            "..00....00..",
+            "............"
+        ], 4);
+
+        // Boss projectile (6x6)
+        this.generatePixelArt('boss_projectile', {
+            '0': 0x000000, '1': 0x8b5cf6, '2': 0xc084fc
+        }, [
+            ".0000.",
+            "012210",
+            "012110",
+            "011210",
+            "012210",
+            ".0000."
+        ], 6);
     }
 
     create() {
         // World setup
         const worldWidth = 6000;
-        const worldHeight = 768; // matches config height
+        const worldHeight = 768;
         this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
         // Input management for Modals
@@ -181,16 +244,19 @@ export class Game extends Scene {
         });
 
         // Background (Parallax)
-        this.cameras.main.setBackgroundColor('#87CEEB'); // Sky blue
+        this.cameras.main.setBackgroundColor('#87CEEB');
 
         // Add clouds
         this.backgroundClouds = this.add.tileSprite(0, 150, worldWidth, 400, 'cloud_placeholder')
             .setOrigin(0, 0)
-            .setScrollFactor(0.2); // Slower scroll for background
+            .setScrollFactor(0.2);
 
         // Build World Layers
         this.platforms = this.physics.add.staticGroup();
         this.triggers = this.physics.add.staticGroup();
+        this.coins = this.physics.add.group();
+        this.enemies = this.physics.add.group();
+        this.bossProjectiles = this.physics.add.group();
 
         // 1. Ground floor stretching across entire level
         const groundY = worldHeight - 32;
@@ -204,13 +270,24 @@ export class Game extends Scene {
         // Follow player camera
         this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-        this.cameras.main.setZoom(1.2); // Zoom in slightly for better pixel effect
+        this.cameras.main.setZoom(1.2);
 
         // Setup collisions
         this.physics.add.collider(this.player, this.platforms);
+        this.physics.add.collider(this.enemies, this.platforms);
+        this.physics.add.collider(this.coins, this.platforms);
 
-        // Setup triggers (overlap without solid collision, or standard collisions with callbacks)
+        // Setup triggers
         this.physics.add.overlap(this.player, this.triggers, this.handleTrigger, undefined, this);
+
+        // Coin collection
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin, undefined, this);
+
+        // Enemy collision
+        this.physics.add.overlap(this.player, this.enemies, this.hitEnemy, undefined, this);
+
+        // Boss projectile collision
+        this.physics.add.overlap(this.player, this.bossProjectiles, this.hitProjectile, undefined, this);
 
         // Create the zones
         this.buildZones();
@@ -219,7 +296,157 @@ export class Game extends Scene {
             this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
         }
 
+        // HUD (Fixed to camera)
+        this.createHUD();
+
         EventBus.emit('current-scene-ready', this);
+    }
+
+    createHUD() {
+        // Hearts
+        for (let i = 0; i < this.playerMaxHP; i++) {
+            const heart = this.add.text(30 + i * 40, 70, '❤️', { fontSize: '24px' })
+                .setScrollFactor(0)
+                .setDepth(100);
+            this.hearts.push(heart);
+        }
+
+        // Coin counter
+        this.coinText = this.add.text(30, 100, '🪙 0', {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#facc15'
+        }).setScrollFactor(0).setDepth(100);
+    }
+
+    updateHUD() {
+        // Update hearts
+        for (let i = 0; i < this.hearts.length; i++) {
+            this.hearts[i].setText(i < this.playerHP ? '❤️' : '🖤');
+        }
+        // Update coins
+        this.coinText.setText('🪙 ' + this.coinCount);
+    }
+
+    collectCoin(_player: any, coin: any) {
+        coin.destroy();
+        this.coinCount++;
+        this.score += 50;
+        EventBus.emit('update-score', this.score);
+        this.updateHUD();
+
+        // Coin pop particles
+        this.tweens.add({
+            targets: this.add.text(coin.x, coin.y, '+50', {
+                fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#facc15'
+            }).setOrigin(0.5),
+            y: coin.y - 50,
+            alpha: 0,
+            duration: 600,
+            onComplete: (_tween: any, targets: any[]) => { targets[0].destroy(); }
+        });
+    }
+
+    hitEnemy(_player: any, enemy: any) {
+        // Stomp from above
+        if (this.player.body!.velocity.y > 0 && this.player.y < enemy.y - 20) {
+            enemy.destroy();
+            this.player.setVelocityY(-350); // Bounce
+            this.score += 200;
+            EventBus.emit('update-score', this.score);
+
+            // Score popup
+            this.tweens.add({
+                targets: this.add.text(enemy.x, enemy.y, '+200', {
+                    fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#4ade80'
+                }).setOrigin(0.5),
+                y: enemy.y - 50,
+                alpha: 0,
+                duration: 600,
+                onComplete: (_tween: any, targets: any[]) => { targets[0].destroy(); }
+            });
+        } else {
+            this.takeDamage();
+        }
+    }
+
+    hitProjectile(_player: any, projectile: any) {
+        projectile.destroy();
+        this.takeDamage();
+    }
+
+    takeDamage() {
+        if (this.invincible) return;
+
+        this.playerHP--;
+        this.invincible = true;
+        this.updateHUD();
+
+        // Flash player red
+        this.player.setTint(0xff0000);
+        this.cameras.main.shake(200, 0.01);
+
+        // Knockback
+        const knockDir = this.player.flipX ? 200 : -200;
+        this.player.setVelocity(knockDir, -250);
+
+        // Invincibility frames (flashing)
+        let flashCount = 0;
+        const flashTimer = this.time.addEvent({
+            delay: 100,
+            callback: () => {
+                flashCount++;
+                this.player.setAlpha(flashCount % 2 === 0 ? 1 : 0.3);
+                if (flashCount >= 16) {
+                    flashTimer.destroy();
+                    this.player.setAlpha(1);
+                    this.player.clearTint();
+                    this.invincible = false;
+                }
+            },
+            loop: true
+        });
+
+        if (this.playerHP <= 0) {
+            // Death
+            this.time.delayedCall(500, () => {
+                this.playerHP = this.playerMaxHP;
+                this.player.setPosition(100, 500);
+                this.player.setVelocity(0, 0);
+                this.updateHUD();
+                this.cameras.main.flash(500, 255, 0, 0);
+            });
+        }
+    }
+
+    spawnEnemy(x: number, patrolLeft: number, patrolRight: number) {
+        const enemy = this.enemies.create(x, 680, 'enemy') as Phaser.Physics.Arcade.Sprite;
+        enemy.setBounce(0);
+        enemy.setCollideWorldBounds(true);
+        (enemy.body as Phaser.Physics.Arcade.Body).setSize(40, 40);
+        enemy.setVelocityX(80);
+
+        // Patrol logic
+        enemy.setData('patrolLeft', patrolLeft);
+        enemy.setData('patrolRight', patrolRight);
+    }
+
+    spawnCoins(startX: number, startY: number, count: number, arcHeight: number = 0) {
+        for (let i = 0; i < count; i++) {
+            const coinX = startX + i * 50;
+            const coinY = startY - (arcHeight > 0 ? Math.sin((i / (count - 1)) * Math.PI) * arcHeight : 0);
+            const coin = this.coins.create(coinX, coinY, 'coin') as Phaser.Physics.Arcade.Sprite;
+            coin.setBounceY(0.3);
+            (coin.body as Phaser.Physics.Arcade.Body).allowGravity = false;
+
+            // Floating animation
+            this.tweens.add({
+                targets: coin,
+                y: coin.y - 8,
+                yoyo: true,
+                repeat: -1,
+                duration: 400 + Math.random() * 300,
+                ease: 'Sine.easeInOut'
+            });
+        }
     }
 
     handleTrigger(player: any, trigger: any) {
@@ -234,47 +461,42 @@ export class Game extends Scene {
         const cursors = this.player.getCursors();
         const downPressed = cursors.down.isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.S).isDown || this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN).isDown;
 
-        // Throttle emission to prevent React spam
+        // Throttle
         const now = this.time.now;
         if (trigger.lastTriggerTime && now - trigger.lastTriggerTime < 2000) {
             return;
         }
 
         if (type === 'qblock') {
-            // Only trigger if hit from below
             if (player.body.velocity.y < 0 && player.body.y > trigger.y) {
                 trigger.lastTriggerTime = now;
-                // Bounce block effect
                 this.tweens.add({
                     targets: trigger,
                     y: trigger.y - 10,
                     yoyo: true,
                     duration: 100,
                     onComplete: () => {
-                        trigger.setTint(0xcccccc); // grey out
+                        trigger.setTint(0xcccccc);
                         EventBus.emit('open-modal', { id: modalId, title, content });
-
                         this.score += 100;
                         EventBus.emit('update-score', this.score);
-                        trigger.disableBody(true, false); // Keep visible but remove physics
+                        trigger.disableBody(true, false);
                     }
                 });
             }
         }
         else if (type === 'trackblock') {
-            // Omni-directional trigger for zone 3
             trigger.lastTriggerTime = now;
-            trigger.disableBody(true, false); // Keep it from triggering again instantly
+            trigger.disableBody(true, false);
             EventBus.emit('open-modal', { id: modalId, title, content });
-
             this.score += 100;
             EventBus.emit('update-score', this.score);
         }
         else if (type === 'pipe') {
-            if (downPressed) { // Enter pipe
+            if (downPressed) {
                 trigger.lastTriggerTime = now;
                 EventBus.emit('open-modal', { id: modalId, title, content });
-                player.setPosition(player.x, player.y - 100); // Popup effect
+                player.setPosition(player.x, player.y - 100);
             }
         }
         else if (type === 'schedule') {
@@ -289,17 +511,21 @@ export class Game extends Scene {
     }
 
     buildZones() {
+        const groundY = 768 - 32;
+
         // Start Zone (0 - 800)
         this.add.text(400, 300, 'Quantum Mesh\nPress arrow keys to move ->', {
             fontFamily: '"Press Start 2P"', fontSize: '24px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
-        // Zone 1: About (1000 - 2000)
+        // Starter coins (teach player to collect)
+        this.spawnCoins(200, groundY - 80, 5);
+
+        // ====== Zone 1: About (1000 - 2000) ======
         this.add.text(1200, 300, 'ZONE 1: ABOUT\nJump & hit from below', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
-        // Add interactive Q-blocks
         const aboutContent = [
             "Quantum Mesh is the ultimate hackathon. Build the future.",
             "Theme: Innovate to Elevate. Create solutions that matter.",
@@ -308,7 +534,6 @@ export class Game extends Scene {
 
         for (let i = 0; i < 3; i++) {
             const block = this.platforms.create(1100 + (i * 150), 550, 'qblock_placeholder');
-            // Add an invisible trigger right below the block to detect hit-from-below easily or we could use the block body itself.
             const trigger = this.triggers.create(block.x, block.y + 16, 'qblock_placeholder');
             trigger.setVisible(false);
             trigger.setData('type', 'qblock');
@@ -317,7 +542,19 @@ export class Game extends Scene {
             trigger.setData('content', aboutContent[i]);
         }
 
-        // Zone 2: Schedule (Hill-like) (2200 - 3200) - NOW USES PIPES
+        // Zone 1 enemies
+        this.spawnEnemy(1400, 1300, 1500);
+        this.spawnEnemy(1700, 1600, 1900);
+
+        // Zone 1 coins (arc over Q-blocks)
+        this.spawnCoins(1050, 480, 5, 40);
+
+        // Elevated platforms with coins
+        this.platforms.create(1800, 550, 'ground_placeholder');
+        this.platforms.create(1864, 550, 'ground_placeholder');
+        this.spawnCoins(1780, 480, 3);
+
+        // ====== Zone 2: Schedule (2200 - 3200) ======
         this.add.text(2500, 300, 'ZONE 2: SCHEDULE\nEnter the pipes', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
@@ -325,80 +562,344 @@ export class Game extends Scene {
         const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
         for (let i = 0; i < 5; i++) {
             const pipeX = 2300 + (i * 200);
-            const height = i < 3 ? i : 4 - i; // Modulates height: 0, 1, 2, 1, 0
+            const height = i < 3 ? i : 4 - i;
             const pipeY = (768 - 64) - (height * 64);
 
-            // Build column down to floor
             for (let j = 0; j <= height; j++) {
                 this.platforms.create(pipeX, (768 - 64) - (j * 64), 'pipe_placeholder');
             }
 
             const trigger = this.triggers.create(pipeX, pipeY - 64, 'qblock_placeholder');
             trigger.setVisible(false);
-            trigger.setData('type', 'pipe'); // Schedule is now in pipes
+            trigger.setData('type', 'pipe');
             trigger.setData('modalId', 'schedule-' + i);
             trigger.setData('title', 'SCHEDULE');
             trigger.setData('content', scheduleContent[i]);
         }
 
-        // Zone 3: Tracks (3500 - 4500) - NOW USES FLY EARTH BLOCKS IN W SHAPE
+        // Zone 2 enemies (between pipes)
+        this.spawnEnemy(2450, 2350, 2550);
+        this.spawnEnemy(2850, 2750, 2950);
+
+        // Coins between pipes
+        this.spawnCoins(2350, groundY - 80, 3);
+        this.spawnCoins(2550, groundY - 80, 3);
+        this.spawnCoins(2750, groundY - 80, 3);
+
+        // ====== Zone 3: Tracks (3500 - 4500) ======
         this.add.text(4000, 200, 'ZONE 3: TRACKS\nHit fly blocks', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
 
-        // Define W points relative to zone start (3600)
-        // A "W" shape using 5 points
         const wPoints = [
             { x: 3600, y: 500, contentIdx: 0 },
             { x: 3800, y: 650, contentIdx: 1 },
             { x: 4000, y: 500, contentIdx: 2 },
             { x: 4200, y: 650, contentIdx: 3 },
-            { x: 4400, y: 500, contentIdx: 0 } // Duplicate or extra info
+            { x: 4400, y: 500, contentIdx: 0 }
         ];
 
         wPoints.forEach((p, i) => {
-            // Make platform solid visual
             const platform = this.platforms.create(p.x, p.y, 'ground_placeholder');
             platform.setScale(1.5);
             platform.refreshBody();
 
-            // Make trigger significantly larger than platform
             const trigger = this.triggers.create(p.x, p.y, 'qblock_placeholder');
-            trigger.setScale(2.5); // Oversized to ensure player overlaps coming from side or top
+            trigger.setScale(2.5);
             trigger.refreshBody();
             trigger.setVisible(false);
-            trigger.setData('type', 'trackblock'); // Omni-collision trigger
+            trigger.setData('type', 'trackblock');
             trigger.setData('modalId', 'track-' + i);
             trigger.setData('title', 'HACKATHON TRACK');
             trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
         });
 
-        // Finale: Boss Arena (4800)
-        this.bossText = this.add.text(4800, 300, 'THE GLITCH OVERLORD APPEARS!\nPRESS F TO PURGE', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#06b6d4', align: 'center'
+        // Zone 3 enemies
+        this.spawnEnemy(3700, 3600, 3800);
+        this.spawnEnemy(4100, 4000, 4250);
+        this.spawnEnemy(4350, 4250, 4450);
+
+        // Coins on top of W platforms
+        this.spawnCoins(3560, 430, 3);
+        this.spawnCoins(3960, 430, 3);
+        this.spawnCoins(4360, 430, 3);
+
+        // ====== Boss Arena (4800+) ======
+        this.buildBossArena();
+    }
+
+    buildBossArena() {
+        const groundY = 768 - 32;
+
+        // Warning sign
+        this.add.text(4650, 350, '⚠ WARNING ⚠\nBOSS AHEAD', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ef4444', align: 'center'
+        }).setOrigin(0.5);
+
+        // Arena walls (pillars)
+        for (let y = 300; y <= groundY; y += 64) {
+            this.platforms.create(4750, y, 'ground_placeholder').setTint(0x333333);
+            this.platforms.create(5400, y, 'ground_placeholder').setTint(0x333333);
+        }
+
+        // Boss arena platforms (for dodging projectiles)
+        this.platforms.create(4900, 550, 'ground_placeholder').setTint(0x444444);
+        this.platforms.create(4964, 550, 'ground_placeholder').setTint(0x444444);
+        this.platforms.create(5100, 450, 'ground_placeholder').setTint(0x444444);
+        this.platforms.create(5164, 450, 'ground_placeholder').setTint(0x444444);
+        this.platforms.create(5250, 550, 'ground_placeholder').setTint(0x444444);
+        this.platforms.create(5314, 550, 'ground_placeholder').setTint(0x444444);
+
+        // Boss Name (above arena, fixed to world)
+        this.bossNameText = this.add.text(5075, 250, 'THE GLITCH OVERLORD', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#06b6d4', align: 'center'
+        }).setOrigin(0.5);
+        this.bossNameText.setVisible(false);
+
+        // Boss Text
+        this.bossText = this.add.text(5075, 280, 'PRESS F TO ATTACK!', {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#fbbf24', align: 'center'
         }).setOrigin(0.5);
         this.bossText.setVisible(false);
 
-        // Visual Boss Health Bar (Retro style)
-        const healthBarBG = this.add.rectangle(4800, 360, 300, 20, 0x000000);
-        const healthBarFill = this.add.rectangle(4800, 360, 296, 16, 0x8b5cf6);
-        healthBarBG.setVisible(false);
-        healthBarFill.setVisible(false);
-        healthBarBG.setData('isBossUI', true);
-        healthBarFill.setData('isBossUI', true);
+        // Boss Health Bar
+        this.bossHealthBarBG = this.add.rectangle(5075, 310, 300, 20, 0x333333).setStrokeStyle(2, 0xffffff);
+        this.bossHealthBarFill = this.add.rectangle(5075, 310, 296, 16, 0x8b5cf6);
+        this.bossHealthBarBG.setVisible(false);
+        this.bossHealthBarFill.setVisible(false);
 
-        this.boss = this.physics.add.sprite(4800, 600, 'boss_placeholder');
+        // Boss Sprite
+        this.boss = this.physics.add.sprite(5200, 500, 'boss_placeholder');
         (this.boss.body as Phaser.Physics.Arcade.Body).allowGravity = false;
-        this.physics.add.collider(this.boss, this.platforms);
         this.boss.setImmovable(true);
-        this.physics.add.collider(this.player, this.boss);
+        this.physics.add.collider(this.player, this.boss, () => {
+            if (!this.bossDead && !this.invincible) {
+                this.takeDamage();
+            }
+        });
+        this.boss.setVisible(false);
+        (this.boss.body as Phaser.Physics.Arcade.Body).checkCollision.none = true;
+    }
 
-        // Store UI refs on boss for easy access
-        this.boss.setData('text', this.bossText);
-        this.boss.setData('barBG', healthBarBG);
-        this.boss.setData('barFill', healthBarFill);
+    startBossFight() {
+        if (this.boss.getData('fightStarted')) return;
+        this.boss.setData('fightStarted', true);
+        this.boss.setVisible(true);
+        (this.boss.body as Phaser.Physics.Arcade.Body).checkCollision.none = false;
+        this.bossNameText.setVisible(true);
+        this.bossText.setVisible(true);
+        this.bossHealthBarBG.setVisible(true);
+        this.bossHealthBarFill.setVisible(true);
+
+        // Camera zoom for drama
+        this.cameras.main.setZoom(1.0);
+        this.cameras.main.flash(300, 100, 0, 200);
+
+        // Boss idle float
+        this.tweens.add({
+            targets: this.boss,
+            y: this.boss.y - 40,
+            yoyo: true,
+            repeat: -1,
+            duration: 1500,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Start attack pattern
+        this.bossAttackCycle();
+    }
+
+    bossAttackCycle() {
+        if (this.bossDead) return;
+
+        const attackDelay = this.bossPhase === 1 ? 2500 : 1500;
+
+        this.bossAttackTimer = this.time.addEvent({
+            delay: attackDelay,
+            callback: () => {
+                if (this.bossDead) return;
+
+                const attacks = this.bossPhase === 1
+                    ? ['shoot']
+                    : ['shoot', 'shoot', 'charge'];
+                const attack = attacks[Math.floor(Math.random() * attacks.length)];
+
+                if (attack === 'shoot') {
+                    this.bossShoot();
+                } else if (attack === 'charge') {
+                    this.bossCharge();
+                }
+            },
+            loop: true
+        });
+    }
+
+    bossShoot() {
+        if (this.bossDead || !this.boss.active) return;
+
+        // Flash boss before shooting
+        this.boss.setTint(0xff00ff);
+        this.time.delayedCall(200, () => {
+            if (this.bossDead) return;
+            this.boss.clearTint();
+
+            // Fire 3 projectiles in spread pattern
+            const angles = this.bossPhase === 1 ? [-10, 0, 10] : [-20, -10, 0, 10, 20];
+            angles.forEach(angle => {
+                const proj = this.bossProjectiles.create(this.boss.x - 30, this.boss.y, 'boss_projectile') as Phaser.Physics.Arcade.Sprite;
+                (proj.body as Phaser.Physics.Arcade.Body).allowGravity = false;
+                const speed = this.bossPhase === 1 ? 250 : 350;
+                const rad = Phaser.Math.DegToRad(180 + angle);
+                proj.setVelocity(Math.cos(rad) * speed, Math.sin(rad) * speed);
+
+                // Spin projectile
+                this.tweens.add({
+                    targets: proj,
+                    angle: 360,
+                    repeat: -1,
+                    duration: 500
+                });
+
+                // Auto-destroy after 3 seconds
+                this.time.delayedCall(3000, () => { if (proj.active) proj.destroy(); });
+            });
+        });
+    }
+
+    bossCharge() {
+        if (this.bossDead || this.bossCharging || !this.boss.active) return;
+        this.bossCharging = true;
+
+        // Warning telegraph
+        this.boss.setTint(0xff0000);
+        this.bossText.setText('INCOMING!');
+
+        this.time.delayedCall(800, () => {
+            if (this.bossDead) return;
+
+            const targetX = this.player.x;
+
+            // Charge towards player
+            this.tweens.add({
+                targets: this.boss,
+                x: targetX,
+                duration: 600,
+                ease: 'Quad.easeIn',
+                onComplete: () => {
+                    if (this.bossDead) return;
+                    // Slam effect
+                    this.cameras.main.shake(300, 0.02);
+
+                    // Return to original position
+                    this.tweens.add({
+                        targets: this.boss,
+                        x: 5200,
+                        duration: 1000,
+                        ease: 'Quad.easeOut',
+                        onComplete: () => {
+                            this.boss.clearTint();
+                            this.bossText.setText('PRESS F TO ATTACK!');
+                            this.bossCharging = false;
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    damageBoss() {
+        if (this.bossDead) return;
+
+        this.bossHP--;
+
+        // Update health bar
+        const hpPercent = this.bossHP / this.bossMaxHP;
+        this.bossHealthBarFill.setScale(hpPercent, 1);
+
+        // Change bar color based on HP
+        if (hpPercent <= 0.3) {
+            this.bossHealthBarFill.setFillStyle(0xef4444); // Red
+        } else if (hpPercent <= 0.6) {
+            this.bossHealthBarFill.setFillStyle(0xfbbf24); // Yellow
+        }
+
+        // Flash boss white on hit
+        this.boss.setTint(0xffffff);
+        this.time.delayedCall(150, () => { if (this.boss.active) this.boss.clearTint(); });
+
+        // Feedback text
+        const dmgText = this.add.text(this.boss.x, this.boss.y - 60, 'HIT!', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ef4444'
+        }).setOrigin(0.5);
+        this.tweens.add({
+            targets: dmgText,
+            y: dmgText.y - 40,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => { dmgText.destroy(); }
+        });
+
+        // Screen shake on hit
+        this.cameras.main.shake(150, 0.01);
+
+        // Phase 2 at 50% HP
+        if (this.bossHP <= Math.floor(this.bossMaxHP / 2) && this.bossPhase === 1) {
+            this.bossPhase = 2;
+            this.bossText.setText('PHASE 2: ENRAGED!');
+            this.boss.setTint(0xff4444);
+            this.cameras.main.flash(500, 200, 0, 0);
+
+            // Restart attack cycle with faster speed
+            if (this.bossAttackTimer) this.bossAttackTimer.destroy();
+            this.bossAttackCycle();
+        }
+
+        // Boss defeated
+        if (this.bossHP <= 0) {
+            this.bossDead = true;
+            if (this.bossAttackTimer) this.bossAttackTimer.destroy();
+
+            this.bossText.setText('SYSTEM STABILIZED!');
+            this.bossHealthBarFill.setScale(0, 1);
+
+            // Destroy all projectiles
+            this.bossProjectiles.clear(true, true);
+
+            // Epic death animation
+            this.tweens.add({
+                targets: this.boss,
+                y: this.boss.y - 400,
+                alpha: 0,
+                angle: 1440,
+                duration: 2000,
+                scaleX: 0,
+                scaleY: 0,
+                ease: 'Back.easeIn',
+                onComplete: () => {
+                    this.boss.destroy();
+                    this.bossNameText.setVisible(false);
+                    this.bossHealthBarBG.setVisible(false);
+                    this.bossHealthBarFill.setVisible(false);
+
+                    // Victory flash
+                    this.cameras.main.flash(1000, 74, 222, 128);
+
+                    this.time.delayedCall(1500, () => {
+                        this.bossText.setText('VICTORY!');
+                        this.time.delayedCall(2000, () => {
+                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated The Glitch Overlord! The journey into Quantum Mesh begins here.' });
+                            EventBus.emit('level-complete');
+                        });
+                    });
+                }
+            });
+
+            // Score bonus
+            this.score += 1000;
+            EventBus.emit('update-score', this.score);
+        }
     }
 
     update() {
@@ -410,7 +911,6 @@ export class Game extends Scene {
             // Background Color Shift on Boss approach
             if (this.player.x > 4300) {
                 const progress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
-                // Interpolate from Sky Blue (#87CEEB) to Deep Dark Void (#111111)
                 const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
                 const endColor = Phaser.Display.Color.HexStringToColor('#111111');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
@@ -418,55 +918,35 @@ export class Game extends Scene {
             } else {
                 this.cameras.main.setBackgroundColor('#87CEEB');
             }
-        }
 
-        // Boss interaction loop
-        if (this.player && this.boss && !this.bossDead) {
-            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
-            const uiText = this.boss.getData('text');
-            const barBG = this.boss.getData('barBG');
-            const barFill = this.boss.getData('barFill');
-
-            // Show UI when close
-            if (dist < 400) {
-                if (uiText) uiText.setVisible(true);
-                if (barBG) barBG.setVisible(true);
-                if (barFill) barFill.setVisible(true);
-
-                // If in range and F is pressed
-                if (this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
-                    this.bossDead = true;
-                    if (uiText) uiText.setText('SYSTEM STABILIZED!');
-                    if (barFill) barFill.setScale(0, 1); // Empty health bar
-                    this.boss.body!.checkCollision.none = true; // allow walking through
-
-                    // Kill boss animation
-                    this.tweens.add({
-                        targets: this.boss,
-                        y: this.boss.y - 400,
-                        alpha: 0,
-                        angle: 720,
-                        duration: 1200,
-                        scaleX: 0,
-                        scaleY: 0,
-                        onComplete: () => {
-                            this.boss.destroy();
-                            if (uiText) uiText.setVisible(false);
-                            if (barBG) barBG.setVisible(false);
-                            if (barFill) barFill.setVisible(false);
-
-                            // TRIGER FINALE DIRECTLY
-                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated the final bug! The journey into Quantum Mesh begins here.' });
-                            EventBus.emit('level-complete');
-                        }
-                    });
-                }
-            } else {
-                if (uiText) uiText.setVisible(false);
-                if (barBG) barBG.setVisible(false);
-                if (barFill) barFill.setVisible(false);
+            // Start boss fight when entering arena
+            if (this.player.x > 4800 && !this.bossDead && this.boss && !this.boss.getData('fightStarted')) {
+                this.startBossFight();
             }
         }
+
+        // Boss interaction: attack with F
+        if (this.player && this.boss && this.boss.active && !this.bossDead) {
+            const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
+            if (dist < 200 && this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
+                this.damageBoss();
+            }
+        }
+
+        // Enemy patrol logic
+        this.enemies.children.each((enemy: any) => {
+            if (!enemy.active) return null;
+            const left = enemy.getData('patrolLeft');
+            const right = enemy.getData('patrolRight');
+            if (enemy.x <= left) {
+                enemy.setVelocityX(80);
+                enemy.setFlipX(false);
+            } else if (enemy.x >= right) {
+                enemy.setVelocityX(-80);
+                enemy.setFlipX(true);
+            }
+            return null;
+        });
 
         // Parallax effect on clouds
         if (this.backgroundClouds) {
