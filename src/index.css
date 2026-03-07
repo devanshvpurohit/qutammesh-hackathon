@@ -3,7 +3,9 @@
 @theme {
   --color-hackathon-primary: #4ade80;
   --color-hackathon-secondary: #60a5fa;
-  --color-hackathon-bg: #1e1b4b;
+  --color-hackathon-accent: #c084fc;
+  --color-hackathon-bg: #0a0a1a;
+  --color-hackathon-surface: #111127;
   --font-pixel: "Press Start 2P", cursive, system-ui;
 }
 
@@ -13,37 +15,158 @@
   }
 }
 
-/* Custom retro styling */
+/* ===== Pixel UI System ===== */
 .pixel-border {
   border: 4px solid white;
   box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
 }
 
 .pixel-card {
-  @apply bg-zinc-900 border-4 border-white p-6;
-  box-shadow: 8px 8px 0px 0px var(--color-black, black);
+  @apply bg-hackathon-surface border-4 border-white/80 p-6;
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.8);
 }
 
 .pixel-btn {
-  @apply bg-hackathon-primary text-black border-4 border-black font-pixel px-4 py-3 uppercase hover:-translate-y-1 hover:shadow-none active:bg-green-500 transition-all cursor-pointer;
-  box-shadow: 4px 4px 0px 0px var(--color-black, black);
+  @apply bg-hackathon-primary text-black border-4 border-black font-pixel px-6 py-3 uppercase transition-all cursor-pointer;
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
 }
 
+.pixel-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 4px 7px 0px 0px rgba(0, 0, 0, 1);
+}
 
+.pixel-btn:active {
+  transform: translateY(1px);
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* ===== Glow Effects ===== */
+.glow-text {
+  text-shadow:
+    0 0 10px rgba(74, 222, 128, 0.8),
+    0 0 30px rgba(74, 222, 128, 0.4),
+    0 0 60px rgba(74, 222, 128, 0.2);
+}
+
+.glow-blue {
+  text-shadow:
+    0 0 10px rgba(96, 165, 250, 0.8),
+    0 0 30px rgba(96, 165, 250, 0.4);
+}
+
+.glow-purple {
+  text-shadow:
+    0 0 10px rgba(192, 132, 252, 0.8),
+    0 0 30px rgba(192, 132, 252, 0.4);
+}
+
+/* ===== Scanline effect ===== */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px);
+  z-index: 2;
+}
+
+/* ===== Flicker animation ===== */
+@keyframes flicker {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.97;
+  }
+
+  25%,
+  75% {
+    opacity: 0.98;
+  }
+}
+
+.crt-flicker {
+  animation: flicker 3s infinite;
+}
+
+/* ===== Floating animation ===== */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.float-anim {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ===== Pulse glow border ===== */
+@keyframes pulse-border {
+
+  0%,
+  100% {
+    border-color: rgba(74, 222, 128, 0.6);
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+  }
+
+  50% {
+    border-color: rgba(74, 222, 128, 1);
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.5);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-border 2s ease-in-out infinite;
+}
+
+/* ===== Star background ===== */
+@keyframes twinkle {
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ===== Scrollbar ===== */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #000;
-  border: 2px solid #555;
+  background: #0a0a1a;
+  border: 1px solid #333;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--color-hackathon-primary);
-  border: 2px solid #000;
+  border: 1px solid #000;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #22c55e;
+}
+
+/* ===== Gradient underline ===== */
+.gradient-underline {
+  background: linear-gradient(90deg, #4ade80, #60a5fa, #c084fc);
+  height: 4px;
 }
