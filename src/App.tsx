@@ -9,12 +9,22 @@ function App() {
   const phaserRef = useRef<IRefPhaserGame | null>(null);
   const [isGameRunning, setIsGameRunning] = useState(false);
   const [score, setScore] = useState(0);
+  const [coinCount, setCoinCount] = useState(0);
+  const [playerHP, setPlayerHP] = useState(3);
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     const updateScore = (newScore: number) => setScore(newScore);
+    const updateCoins = (count: number) => setCoinCount(count);
+    const updateHP = (hp: number) => setPlayerHP(hp);
     EventBus.on('update-score', updateScore);
-    return () => { EventBus.removeListener('update-score', updateScore); }
+    EventBus.on('update-coins', updateCoins);
+    EventBus.on('update-hp', updateHP);
+    return () => {
+      EventBus.removeListener('update-score', updateScore);
+      EventBus.removeListener('update-coins', updateCoins);
+      EventBus.removeListener('update-hp', updateHP);
+    }
   }, []);
 
   const onActiveScene = (scene: Phaser.Scene) => {
@@ -194,27 +204,26 @@ function App() {
             <PhaserGame ref={phaserRef} currentActiveScene={onActiveScene} />
             <OverlayModals />
 
-            {/* Top HUD Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-              <div className="flex items-center justify-between px-4 py-2 bg-black/70 backdrop-blur-sm border-b-2 border-hackathon-primary/30">
-                <div className="flex items-center gap-4">
+            {/* Zelda-Style Floating HUD */}
+            <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none p-6">
+              <div className="flex justify-between items-start max-w-6xl mx-auto">
+                {/* LIVES (Top Left) */}
+                <div className="flex gap-1.5" style={{ filter: 'drop-shadow(2px 2px 0px rgba(0,0,0,1))' }}>
+                  {Array.from({ length: 3 }, (_, i) => i < playerHP ? '❤️' : '🖤').map((heart, idx) => (
+                    <span key={idx} className="text-2xl">{heart}</span>
+                  ))}
+                </div>
+
+                {/* RUPEES & SCORE (Top Right) */}
+                <div className="flex flex-col items-end gap-1.5 text-white font-pixel" style={{ textShadow: '2px 2px 0px rgba(0,0,0,1)' }}>
                   <div className="flex items-center gap-2">
-                    <span className="text-hackathon-primary text-xs">SCORE</span>
-                    <span className="text-white text-sm tabular-nums">{score.toString().padStart(6, '0')}</span>
+                    <span className="text-2xl">💎</span>
+                    <span className="text-xl">{(coinCount).toString().padStart(3, '0')}</span>
+                  </div>
+                  <div className="text-[10px] text-yellow-400 tracking-widest mt-1 opacity-90">
+                    SCORE {score.toString().padStart(6, '0')}
                   </div>
                 </div>
-                <div className="text-hackathon-secondary text-[8px] tracking-widest">
-                  QUANTUM MESH 2026
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Controls Hint */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-              <div className="bg-black/50 backdrop-blur-sm px-4 py-1 rounded border border-white/10">
-                <p className="text-gray-400 text-[8px] tracking-wider">
-                  WASD / ARROWS = Move &nbsp;•&nbsp; SPACE = Jump &nbsp;•&nbsp; F = Attack
-                </p>
               </div>
             </div>
           </motion.div>

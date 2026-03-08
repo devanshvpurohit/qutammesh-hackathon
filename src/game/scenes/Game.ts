@@ -303,17 +303,18 @@ export class Game extends Scene {
     }
 
     createHUD() {
-        // Hearts
+        // Hearts on the RIGHT side
+        const camWidth = this.cameras.main.width;
         for (let i = 0; i < this.playerMaxHP; i++) {
-            const heart = this.add.text(30 + i * 40, 70, '❤️', { fontSize: '24px' })
+            const heart = this.add.text(camWidth - 50 - i * 36, 50, '❤️', { fontSize: '20px' })
                 .setScrollFactor(0)
                 .setDepth(100);
             this.hearts.push(heart);
         }
 
-        // Coin counter
-        this.coinText = this.add.text(30, 100, '🪙 0', {
-            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#facc15'
+        // Coin counter (in-game, small, top-left area below score)
+        this.coinText = this.add.text(30, 70, '🪙 x0', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#facc15'
         }).setScrollFactor(0).setDepth(100);
     }
 
@@ -323,7 +324,7 @@ export class Game extends Scene {
             this.hearts[i].setText(i < this.playerHP ? '❤️' : '🖤');
         }
         // Update coins
-        this.coinText.setText('🪙 ' + this.coinCount);
+        this.coinText.setText('🪙 x' + this.coinCount);
     }
 
     collectCoin(_player: any, coin: any) {
@@ -331,6 +332,7 @@ export class Game extends Scene {
         this.coinCount++;
         this.score += 50;
         EventBus.emit('update-score', this.score);
+        EventBus.emit('update-coins', this.coinCount);
         this.updateHUD();
 
         // Coin pop particles
@@ -379,22 +381,29 @@ export class Game extends Scene {
         this.playerHP--;
         this.invincible = true;
         this.updateHUD();
+        EventBus.emit('update-hp', this.playerHP);
 
-        // Flash player red
-        this.player.setTint(0xff0000);
+        // Flash player GRAY (not red)
+        this.player.setTint(0x888888);
         this.cameras.main.shake(200, 0.01);
 
         // Knockback
         const knockDir = this.player.flipX ? 200 : -200;
         this.player.setVelocity(knockDir, -250);
 
-        // Invincibility frames (flashing)
+        // Invincibility frames (gray blinking)
         let flashCount = 0;
         const flashTimer = this.time.addEvent({
             delay: 100,
             callback: () => {
                 flashCount++;
-                this.player.setAlpha(flashCount % 2 === 0 ? 1 : 0.3);
+                if (flashCount % 2 === 0) {
+                    this.player.setAlpha(1);
+                    this.player.clearTint();
+                } else {
+                    this.player.setAlpha(0.4);
+                    this.player.setTint(0x888888);
+                }
                 if (flashCount >= 16) {
                     flashTimer.destroy();
                     this.player.setAlpha(1);
@@ -412,6 +421,7 @@ export class Game extends Scene {
                 this.player.setPosition(100, 500);
                 this.player.setVelocity(0, 0);
                 this.updateHUD();
+                EventBus.emit('update-hp', this.playerHP);
                 this.cameras.main.flash(500, 255, 0, 0);
             });
         }
@@ -486,11 +496,13 @@ export class Game extends Scene {
             }
         }
         else if (type === 'trackblock') {
-            trigger.lastTriggerTime = now;
-            trigger.disableBody(true, false);
-            EventBus.emit('open-modal', { id: modalId, title, content });
-            this.score += 100;
-            EventBus.emit('update-score', this.score);
+            if (downPressed) {
+                trigger.lastTriggerTime = now;
+                trigger.disableBody(true, false);
+                EventBus.emit('open-modal', { id: modalId, title, content });
+                this.score += 100;
+                EventBus.emit('update-score', this.score);
+            }
         }
         else if (type === 'pipe') {
             if (downPressed) {
@@ -500,8 +512,10 @@ export class Game extends Scene {
             }
         }
         else if (type === 'schedule') {
-            trigger.lastTriggerTime = now;
-            EventBus.emit('open-modal', { id: modalId, title, content });
+            if (downPressed) {
+                trigger.lastTriggerTime = now;
+                EventBus.emit('open-modal', { id: modalId, title, content });
+            }
         }
         else if (type === 'castle') {
             trigger.lastTriggerTime = now;
@@ -514,16 +528,27 @@ export class Game extends Scene {
         const groundY = 768 - 32;
 
         // Start Zone (0 - 800)
-        this.add.text(400, 300, 'Quantum Mesh\nPress arrow keys to move ->', {
-            fontFamily: '"Press Start 2P"', fontSize: '24px', color: '#000000', align: 'center'
+        this.add.text(400, 250, 'Quantum Mesh', {
+            fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#000000', align: 'center'
+        }).setOrigin(0.5);
+        this.add.text(400, 310, 'Use ARROWS or WASD to move', {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#333333', align: 'center'
+        }).setOrigin(0.5);
+        this.add.text(400, 340, 'SPACE or W to jump', {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#333333', align: 'center'
         }).setOrigin(0.5);
 
         // Starter coins (teach player to collect)
         this.spawnCoins(200, groundY - 80, 5);
 
         // ====== Zone 1: About (1000 - 2000) ======
-        this.add.text(1200, 300, 'ZONE 1: ABOUT\nJump & hit from below', {
+        this.add.text(1200, 280, 'ZONE 1: ABOUT', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        }).setOrigin(0.5);
+        // Action instruction sign
+        this.add.text(1200, 320, '[ JUMP \u2191 HIT ? BLOCKS FROM BELOW ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
+            backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
         const aboutContent = [
@@ -540,23 +565,37 @@ export class Game extends Scene {
             trigger.setData('modalId', 'about-' + i);
             trigger.setData('title', 'ABOUT');
             trigger.setData('content', aboutContent[i]);
+
+            // Coins ABOVE each Q-block
+            this.spawnCoins(block.x - 25, block.y - 80, 2);
+
+            // Small arrow hint on FIRST block only
+            if (i === 0) {
+                const hint = this.add.text(block.x, block.y + 50, '\u2191 JUMP', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ef4444',
+                    align: 'center'
+                }).setOrigin(0.5);
+                this.tweens.add({ targets: hint, y: hint.y - 6, yoyo: true, repeat: -1, duration: 600 });
+            }
         }
 
         // Zone 1 enemies
         this.spawnEnemy(1400, 1300, 1500);
         this.spawnEnemy(1700, 1600, 1900);
 
-        // Zone 1 coins (arc over Q-blocks)
-        this.spawnCoins(1050, 480, 5, 40);
-
-        // Elevated platforms with coins
+        // Elevated platforms with coins on top
         this.platforms.create(1800, 550, 'ground_placeholder');
         this.platforms.create(1864, 550, 'ground_placeholder');
         this.spawnCoins(1780, 480, 3);
 
         // ====== Zone 2: Schedule (2200 - 3200) ======
-        this.add.text(2500, 300, 'ZONE 2: SCHEDULE\nEnter the pipes', {
+        this.add.text(2500, 280, 'ZONE 2: SCHEDULE', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        }).setOrigin(0.5);
+        // Action instruction sign
+        this.add.text(2500, 320, '[ PRESS \u2193 ON PIPES TO READ ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
+            backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
         const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
@@ -575,20 +614,32 @@ export class Game extends Scene {
             trigger.setData('modalId', 'schedule-' + i);
             trigger.setData('title', 'SCHEDULE');
             trigger.setData('content', scheduleContent[i]);
+
+            // Coins ABOVE each pipe
+            this.spawnCoins(pipeX - 25, pipeY - 120, 2);
+
+            // Small arrow hint on FIRST pipe only
+            if (i === 0) {
+                const hint = this.add.text(pipeX, pipeY - 40, '\u2193 PRESS', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ef4444',
+                    align: 'center'
+                }).setOrigin(0.5);
+                this.tweens.add({ targets: hint, y: hint.y - 6, yoyo: true, repeat: -1, duration: 600 });
+            }
         }
 
         // Zone 2 enemies (between pipes)
         this.spawnEnemy(2450, 2350, 2550);
         this.spawnEnemy(2850, 2750, 2950);
 
-        // Coins between pipes
-        this.spawnCoins(2350, groundY - 80, 3);
-        this.spawnCoins(2550, groundY - 80, 3);
-        this.spawnCoins(2750, groundY - 80, 3);
-
         // ====== Zone 3: Tracks (3500 - 4500) ======
-        this.add.text(4000, 200, 'ZONE 3: TRACKS\nHit fly blocks', {
+        this.add.text(4000, 180, 'ZONE 3: TRACKS', {
             fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        }).setOrigin(0.5);
+        // Action instruction sign
+        this.add.text(4000, 220, '[ PRESS \u2193 ON PLATFORMS TO READ ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
+            backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
@@ -614,6 +665,18 @@ export class Game extends Scene {
             trigger.setData('modalId', 'track-' + i);
             trigger.setData('title', 'HACKATHON TRACK');
             trigger.setData('content', tracksContent[p.contentIdx] || tracksContent[0]);
+
+            // Coins ABOVE each W-platform
+            this.spawnCoins(p.x - 25, p.y - 100, 3);
+
+            // Small arrow hint on FIRST platform only
+            if (i === 0) {
+                const hint = this.add.text(p.x, p.y - 40, '\u2193 PRESS', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ef4444',
+                    align: 'center'
+                }).setOrigin(0.5);
+                this.tweens.add({ targets: hint, y: hint.y - 6, yoyo: true, repeat: -1, duration: 600 });
+            }
         });
 
         // Zone 3 enemies
@@ -621,28 +684,17 @@ export class Game extends Scene {
         this.spawnEnemy(4100, 4000, 4250);
         this.spawnEnemy(4350, 4250, 4450);
 
-        // Coins on top of W platforms
-        this.spawnCoins(3560, 430, 3);
-        this.spawnCoins(3960, 430, 3);
-        this.spawnCoins(4360, 430, 3);
-
         // ====== Boss Arena (4800+) ======
         this.buildBossArena();
     }
 
     buildBossArena() {
-        const groundY = 768 - 32;
-
         // Warning sign
         this.add.text(4650, 350, '⚠ WARNING ⚠\nBOSS AHEAD', {
             fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ef4444', align: 'center'
         }).setOrigin(0.5);
 
-        // Arena walls (pillars)
-        for (let y = 300; y <= groundY; y += 64) {
-            this.platforms.create(4750, y, 'ground_placeholder').setTint(0x333333);
-            this.platforms.create(5400, y, 'ground_placeholder').setTint(0x333333);
-        }
+        // (Walls removed for open arena feel)
 
         // Boss arena platforms (for dodging projectiles)
         this.platforms.create(4900, 550, 'ground_placeholder').setTint(0x444444);
