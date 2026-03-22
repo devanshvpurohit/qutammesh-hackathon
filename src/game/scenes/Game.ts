@@ -744,7 +744,7 @@ export class Game extends Scene {
             fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#c084fc', align: 'center'
         }).setOrigin(0.5);
 
-        // Boss arena platforms - EARTH THEMED (brown/dark)
+        // Boss arena platforms
         const bossArenaY = 550;
         const platforms = [
             { x: 4900, y: bossArenaY },
@@ -757,15 +757,8 @@ export class Game extends Scene {
 
         platforms.forEach(p => {
             const platform = this.platforms.create(p.x, p.y, 'ground_placeholder');
-            platform.setTint(0x5c3d2e); // Dark brown earth color
+            platform.setTint(0x444444); // Dark gray
         });
-
-        // Add earth texture overlay
-        for (let i = 0; i < 6; i++) {
-            this.add.rectangle(4900 + (i * 64), bossArenaY + 20, 64, 20, 0x3d2817)
-                .setOrigin(0, 0)
-                .setScrollFactor(1);
-        }
 
         // Boss Name (above arena, fixed to world)
         this.bossNameText = this.add.text(5075, 250, 'THE GLITCH OVERLORD', {
