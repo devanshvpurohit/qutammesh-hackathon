@@ -201,6 +201,13 @@ export function Website() {
                     </p>
                   </div>
                   <div className="pixel-card">
+                    <h4 className="text-xl text-blue-500 mb-3">� IOT TRACK</h4>
+                    <p className="text-gray-300 text-sm">
+                      Build connected devices and smart solutions. Create IoT applications, 
+                      smart home projects, or sensor-based innovations.
+                    </p>
+                  </div>
+                  <div className="pixel-card">
                     <h4 className="text-xl text-yellow-400 mb-3">🚀 OPEN INNOVATION TRACK</h4>
                     <p className="text-gray-300 text-sm">
                       Think outside the box. Build anything that doesn't fit other categories - 
