@@ -13,7 +13,6 @@ export class Game extends Scene {
     private bossDead: boolean = false;
     private fKey!: Phaser.Input.Keyboard.Key;
     private inputActive: boolean = true;
-    private dayNightCycle: number = 0; // 0-1, where 0.5 is noon
 
     // NEW: Game systems
     private playerHP: number = 3;
@@ -285,7 +284,34 @@ export class Game extends Scene {
             "..0000.."
         ], 5);
 
-    create() {
+        // Pixel Heart (8x8)
+        this.generatePixelArt('heart', {
+            '0': 0x000000, '1': 0xff6b6b, '2': 0xff0000
+        }, [
+            ".01110110.",
+            "0122222210",
+            "0122222210",
+            "0122222210",
+            ".0122220.",
+            "..012210.",
+            "...0120..",
+            "....0...."
+        ], 4);
+
+        // Pixel Empty Heart (8x8)
+        this.generatePixelArt('heart_empty', {
+            '0': 0x000000, '1': 0x444444, '2': 0x222222
+        }, [
+            ".01110110.",
+            "0122222210",
+            "0122222210",
+            "0122222210",
+            ".0122220.",
+            "..012210.",
+            "...0120..",
+            "....0...."
+        ], 4);
+    }
         // World setup
         const worldWidth = 6000;
         const worldHeight = 768;
@@ -373,13 +399,14 @@ export class Game extends Scene {
     }
 
     createHUD() {
-        // Hearts on the RIGHT side
+        // Hearts on the RIGHT side - using pixel art
         const camWidth = this.cameras.main.width;
         for (let i = 0; i < this.playerMaxHP; i++) {
-            const heart = this.add.text(camWidth - 50 - i * 36, 50, '❤️', { fontSize: '20px' })
+            const heart = this.add.sprite(camWidth - 50 - i * 40, 50, 'heart')
                 .setScrollFactor(0)
-                .setDepth(100);
-            this.hearts.push(heart);
+                .setDepth(100)
+                .setScale(1.5);
+            this.hearts.push(heart as any);
         }
 
         // Coin counter (in-game, small, top-left area below score)
@@ -394,9 +421,14 @@ export class Game extends Scene {
     }
 
     updateHUD() {
-        // Update hearts
+        // Update hearts - use full heart or empty heart sprite
         for (let i = 0; i < this.hearts.length; i++) {
-            this.hearts[i].setText(i < this.playerHP ? '❤️' : '🖤');
+            const heart = this.hearts[i] as any;
+            if (i < this.playerHP) {
+                heart.setTexture('heart');
+            } else {
+                heart.setTexture('heart_empty');
+            }
         }
         // Update coins
         this.coinText.setText('🪙 x' + this.coinCount);
