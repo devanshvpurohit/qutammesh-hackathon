@@ -1005,12 +1005,18 @@ export class Game extends Scene {
             // Background Color Shift on Boss approach
             if (this.player.x > 4300) {
                 const progress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
-                const startColor = Phaser.Display.Color.HexStringToColor('#87CEEB');
-                const endColor = Phaser.Display.Color.HexStringToColor('#111111');
+                const startColor = Phaser.Display.Color.HexStringToColor('#0f0620');
+                const endColor = Phaser.Display.Color.HexStringToColor('#0a0010');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
+
+                // Zoom out as player approaches boss
+                const zoomProgress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
+                const targetZoom = 1.15 - (zoomProgress * 0.25); // Zoom from 1.15 to 0.9
+                this.cameras.main.setZoom(targetZoom);
             } else {
-                this.cameras.main.setBackgroundColor('#87CEEB');
+                this.cameras.main.setBackgroundColor('#0f0620');
+                this.cameras.main.setZoom(1.15);
             }
 
             // Start boss fight when entering arena
