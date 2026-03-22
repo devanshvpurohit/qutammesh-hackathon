@@ -9,17 +9,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Physics constants for fine-tuning
-    private readonly SPEED = 320;
-    private readonly ACCEL = 1200;
-    private readonly DRAG = 1800;
-    private readonly JUMP_FORCE = -550;
-    private readonly VARIABLE_JUMP_MODIFIER = 0.5;
+    private readonly SPEED = 350;
+    private readonly ACCEL = 1400;
+    private readonly DRAG = 2000;
+    private readonly JUMP_FORCE = -600;
+    private readonly VARIABLE_JUMP_MODIFIER = 0.45;
 
     // Feel variables
     private coyoteTime: number = 0;
-    private readonly COYOTE_DURATION = 150; // ms
+    private readonly COYOTE_DURATION = 160; // ms
     private jumpBuffer: number = 0;
-    private readonly JUMP_BUFFER_DURATION = 150; // ms
+    private readonly JUMP_BUFFER_DURATION = 160; // ms
 
     constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
         super(scene, x, y, texture);

@@ -243,13 +243,24 @@ export class Game extends Scene {
             }
         });
 
-        // Background (Parallax)
-        this.cameras.main.setBackgroundColor('#1a0033'); // Dark purple fantasy sky
+        // Background (Parallax) with gradient effect
+        this.cameras.main.setBackgroundColor('#0f0620'); // Darker purple fantasy sky
 
-        // Add clouds
-        this.backgroundClouds = this.add.tileSprite(0, 150, worldWidth, 400, 'cloud_placeholder')
+        // Add clouds with better parallax
+        this.backgroundClouds = this.add.tileSprite(0, 100, worldWidth, 400, 'cloud_placeholder')
             .setOrigin(0, 0)
-            .setScrollFactor(0.2);
+            .setScrollFactor(0.15)
+            .setAlpha(0.7);
+        
+        // Add stars for atmosphere
+        for (let i = 0; i < 50; i++) {
+            const starX = Math.random() * worldWidth;
+            const starY = Math.random() * 300;
+            const starSize = Math.random() * 2 + 1;
+            this.add.rectangle(starX, starY, starSize, starSize, 0xffffff)
+                .setScrollFactor(0.1)
+                .setAlpha(Math.random() * 0.6 + 0.3);
+        }
 
         // Build World Layers
         this.platforms = this.physics.add.staticGroup();
@@ -267,10 +278,10 @@ export class Game extends Scene {
         // Setup the Player
         this.player = new Player(this, 100, groundY - 100, 'player_placeholder');
 
-        // Follow player camera
-        this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
+        // Follow player camera with smooth lerp
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-        this.cameras.main.setZoom(1.2);
+        this.cameras.main.setZoom(1.15);
 
         // Setup collisions
         this.physics.add.collider(this.player, this.platforms);
@@ -351,18 +362,21 @@ export class Game extends Scene {
         // Stomp from above
         if (this.player.body!.velocity.y > 0 && this.player.y < enemy.y - 20) {
             enemy.destroy();
-            this.player.setVelocityY(-350); // Bounce
+            this.player.setVelocityY(-400); // Stronger bounce
             this.score += 200;
             EventBus.emit('update-score', this.score);
+            this.cameras.main.shake(150, 0.008);
 
-            // Score popup
+            // Score popup with better animation
+            const scoreText = this.add.text(enemy.x, enemy.y, '+200', {
+                fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#4ade80'
+            }).setOrigin(0.5);
             this.tweens.add({
-                targets: this.add.text(enemy.x, enemy.y, '+200', {
-                    fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#4ade80'
-                }).setOrigin(0.5),
-                y: enemy.y - 50,
+                targets: scoreText,
+                y: enemy.y - 60,
                 alpha: 0,
-                duration: 600,
+                duration: 700,
+                ease: 'Quad.easeOut',
                 onComplete: (_tween: any, targets: any[]) => { targets[0].destroy(); }
             });
         } else {
@@ -383,28 +397,28 @@ export class Game extends Scene {
         this.updateHUD();
         EventBus.emit('update-hp', this.playerHP);
 
-        // Flash player GRAY (not red)
-        this.player.setTint(0x888888);
-        this.cameras.main.shake(200, 0.01);
+        // Flash player RED (damage indicator)
+        this.player.setTint(0xff6b6b);
+        this.cameras.main.shake(250, 0.015);
 
-        // Knockback
-        const knockDir = this.player.flipX ? 200 : -200;
-        this.player.setVelocity(knockDir, -250);
+        // Knockback with more force
+        const knockDir = this.player.flipX ? 250 : -250;
+        this.player.setVelocity(knockDir, -300);
 
-        // Invincibility frames (gray blinking)
+        // Invincibility frames (red blinking)
         let flashCount = 0;
         const flashTimer = this.time.addEvent({
-            delay: 100,
+            delay: 80,
             callback: () => {
                 flashCount++;
                 if (flashCount % 2 === 0) {
                     this.player.setAlpha(1);
                     this.player.clearTint();
                 } else {
-                    this.player.setAlpha(0.4);
-                    this.player.setTint(0x888888);
+                    this.player.setAlpha(0.5);
+                    this.player.setTint(0xff6b6b);
                 }
-                if (flashCount >= 16) {
+                if (flashCount >= 18) {
                     flashTimer.destroy();
                     this.player.setAlpha(1);
                     this.player.clearTint();
@@ -422,7 +436,7 @@ export class Game extends Scene {
                 this.player.setVelocity(0, 0);
                 this.updateHUD();
                 EventBus.emit('update-hp', this.playerHP);
-                this.cameras.main.flash(500, 255, 0, 0);
+                this.cameras.main.flash(600, 255, 100, 100);
             });
         }
     }
@@ -747,15 +761,26 @@ export class Game extends Scene {
 
         // Camera zoom for drama
         this.cameras.main.setZoom(1.0);
-        this.cameras.main.flash(300, 100, 0, 200);
+        this.cameras.main.flash(400, 150, 50, 200);
+        this.cameras.main.shake(300, 0.015);
+
+        // Boss entrance animation
+        this.tweens.add({
+            targets: this.boss,
+            scaleX: 1.1,
+            scaleY: 1.1,
+            duration: 300,
+            yoyo: true,
+            ease: 'Back.easeOut'
+        });
 
         // Boss idle float
         this.tweens.add({
             targets: this.boss,
-            y: this.boss.y - 40,
+            y: this.boss.y - 50,
             yoyo: true,
             repeat: -1,
-            duration: 1500,
+            duration: 1800,
             ease: 'Sine.easeInOut'
         });
 
@@ -866,42 +891,59 @@ export class Game extends Scene {
 
         this.bossHP--;
 
-        // Update health bar
+        // Update health bar with smooth animation
         const hpPercent = this.bossHP / this.bossMaxHP;
-        this.bossHealthBarFill.setScale(hpPercent, 1);
+        this.tweens.add({
+            targets: this.bossHealthBarFill,
+            scaleX: hpPercent,
+            duration: 300,
+            ease: 'Quad.easeOut'
+        });
 
         // Change bar color based on HP
         if (hpPercent <= 0.3) {
-            this.bossHealthBarFill.setFillStyle(0xef4444); // Red
+            this.bossHealthBarFill.setFillStyle(0xff6b6b); // Red
         } else if (hpPercent <= 0.6) {
             this.bossHealthBarFill.setFillStyle(0xfbbf24); // Yellow
         }
 
-        // Flash boss white on hit
+        // Flash boss white on hit with scale
         this.boss.setTint(0xffffff);
+        this.tweens.add({
+            targets: this.boss,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 100,
+            yoyo: true,
+            ease: 'Quad.easeOut'
+        });
         this.time.delayedCall(150, () => { if (this.boss.active) this.boss.clearTint(); });
 
-        // Feedback text
+        // Feedback text with scale
         const dmgText = this.add.text(this.boss.x, this.boss.y - 60, 'HIT!', {
-            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ef4444'
+            fontFamily: '"Press Start 2P"', fontSize: '18px', color: '#ff6b6b'
         }).setOrigin(0.5);
         this.tweens.add({
             targets: dmgText,
-            y: dmgText.y - 40,
+            y: dmgText.y - 50,
             alpha: 0,
-            duration: 500,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            duration: 600,
+            ease: 'Quad.easeOut',
             onComplete: () => { dmgText.destroy(); }
         });
 
         // Screen shake on hit
-        this.cameras.main.shake(150, 0.01);
+        this.cameras.main.shake(200, 0.015);
 
         // Phase 2 at 50% HP
         if (this.bossHP <= Math.floor(this.bossMaxHP / 2) && this.bossPhase === 1) {
             this.bossPhase = 2;
             this.bossText.setText('PHASE 2: ENRAGED!');
             this.boss.setTint(0xff4444);
-            this.cameras.main.flash(500, 200, 0, 0);
+            this.cameras.main.flash(600, 255, 50, 50);
+            this.cameras.main.shake(400, 0.02);
 
             // Restart attack cycle with faster speed
             if (this.bossAttackTimer) this.bossAttackTimer.destroy();
@@ -922,12 +964,12 @@ export class Game extends Scene {
             // Epic death animation
             this.tweens.add({
                 targets: this.boss,
-                y: this.boss.y - 400,
+                y: this.boss.y - 500,
                 alpha: 0,
-                angle: 1440,
-                duration: 2000,
-                scaleX: 0,
-                scaleY: 0,
+                angle: 1800,
+                duration: 2500,
+                scaleX: 0.2,
+                scaleY: 0.2,
                 ease: 'Back.easeIn',
                 onComplete: () => {
                     this.boss.destroy();
@@ -936,7 +978,7 @@ export class Game extends Scene {
                     this.bossHealthBarFill.setVisible(false);
 
                     // Victory flash
-                    this.cameras.main.flash(1000, 74, 222, 128);
+                    this.cameras.main.flash(1200, 100, 200, 100);
 
                     this.time.delayedCall(1500, () => {
                         this.bossText.setText('VICTORY!');
