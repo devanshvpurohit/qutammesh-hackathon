@@ -53,12 +53,13 @@ const DialogueBox = ({ data, onDone }: { data: ModalData; onDone: () => void }) 
             className="w-[90%] max-w-2xl mx-auto absolute bottom-8 left-0 right-0 z-40 pointer-events-none"
         >
             <div
-                className="relative bg-black/85 backdrop-blur-md text-white px-6 py-5 font-pixel leading-loose"
+                className="relative bg-black/50 backdrop-blur-lg text-white px-6 py-5 font-pixel leading-loose"
                 style={{
                     border: '4px solid #b45309', // Dark gold/wood border
                     borderRadius: '4px',
-                    boxShadow: 'inset 0 0 20px rgba(0,0,0,1), 0 10px 25px rgba(0,0,0,0.8)',
-                    minHeight: '120px'
+                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5), 0 10px 25px rgba(0,0,0,0.6)',
+                    minHeight: '120px',
+                    background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(180,83,9,0.1) 100%)'
                 }}
             >
                 {/* Corner Accents */}

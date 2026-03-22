@@ -244,7 +244,7 @@ export class Game extends Scene {
         });
 
         // Background (Parallax)
-        this.cameras.main.setBackgroundColor('#87CEEB');
+        this.cameras.main.setBackgroundColor('#1a0033'); // Dark purple fantasy sky
 
         // Add clouds
         this.backgroundClouds = this.add.tileSprite(0, 150, worldWidth, 400, 'cloud_placeholder')
@@ -528,26 +528,26 @@ export class Game extends Scene {
         const groundY = 768 - 32;
 
         // Start Zone (0 - 800)
-        this.add.text(400, 250, 'Quantum Mesh', {
-            fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#000000', align: 'center'
+        this.add.text(400, 250, '⚔️ QUANTUM MESH ⚔️', {
+            fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c084fc', align: 'center'
         }).setOrigin(0.5);
         this.add.text(400, 310, 'Use ARROWS or WASD to move', {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#333333', align: 'center'
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#60a5fa', align: 'center'
         }).setOrigin(0.5);
         this.add.text(400, 340, 'SPACE or W to jump', {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#333333', align: 'center'
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#60a5fa', align: 'center'
         }).setOrigin(0.5);
 
         // Starter coins (teach player to collect)
         this.spawnCoins(200, groundY - 80, 5);
 
         // ====== Zone 1: About (1000 - 2000) ======
-        this.add.text(1200, 280, 'ZONE 1: ABOUT', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        this.add.text(1200, 280, '🏰 ZONE 1: THE ANCIENT HALLS 🏰', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#4ade80', align: 'center'
         }).setOrigin(0.5);
         // Action instruction sign
         this.add.text(1200, 320, '[ JUMP \u2191 HIT ? BLOCKS FROM BELOW ]', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#fbbf24',
             backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
@@ -589,13 +589,13 @@ export class Game extends Scene {
         this.spawnCoins(1780, 480, 3);
 
         // ====== Zone 2: Schedule (2200 - 3200) ======
-        this.add.text(2500, 280, 'ZONE 2: SCHEDULE', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        this.add.text(2500, 280, '🌙 ZONE 2: THE SHADOW PIPES 🌙', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#4ade80', align: 'center'
         }).setOrigin(0.5);
         // Action instruction sign
         this.add.text(2500, 320, '[ PRESS \u2193 ON PIPES TO READ ]', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
-            backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#fbbf24',
+            backgroundColor: '#1a0033', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
         const scheduleContent = ['Registration', 'Opening Ceremony', 'Hacking Time', 'Judging', 'Demo Day'];
@@ -633,13 +633,13 @@ export class Game extends Scene {
         this.spawnEnemy(2850, 2750, 2950);
 
         // ====== Zone 3: Tracks (3500 - 4500) ======
-        this.add.text(4000, 180, 'ZONE 3: TRACKS', {
-            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#000000', align: 'center'
+        this.add.text(4000, 180, '✨ ZONE 3: THE CRYSTAL REALM ✨', {
+            fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#4ade80', align: 'center'
         }).setOrigin(0.5);
         // Action instruction sign
         this.add.text(4000, 220, '[ PRESS \u2193 ON PLATFORMS TO READ ]', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#b91c1c',
-            backgroundColor: '#fef08a', padding: { x: 8, y: 4 }, align: 'center'
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#fbbf24',
+            backgroundColor: '#1a0033', padding: { x: 8, y: 4 }, align: 'center'
         }).setOrigin(0.5);
 
         const tracksContent = ['🤖 AI Track', '🌐 Web Track', '🌱 Sustainability', '🚀 Open Innovation'];
@@ -690,8 +690,8 @@ export class Game extends Scene {
 
     buildBossArena() {
         // Warning sign
-        this.add.text(4650, 350, '⚠ WARNING ⚠\nBOSS AHEAD', {
-            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#ef4444', align: 'center'
+        this.add.text(4650, 350, '⚡ BEWARE ⚡\nTHE GLITCH OVERLORD', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#c084fc', align: 'center'
         }).setOrigin(0.5);
 
         // (Walls removed for open arena feel)
