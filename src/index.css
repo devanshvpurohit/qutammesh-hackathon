@@ -26,6 +26,12 @@
   box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.8);
 }
 
+.pixel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 8px 10px 0px 0px rgba(0, 0, 0, 0.8);
+  transition: all 0.2s ease;
+}
+
 .pixel-btn {
   @apply bg-hackathon-primary text-black border-4 border-black font-pixel px-6 py-3 uppercase transition-all cursor-pointer;
   box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);

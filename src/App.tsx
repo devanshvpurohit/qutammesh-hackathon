@@ -3,11 +3,13 @@ import { PhaserGame } from './game/PhaserGame';
 import type { IRefPhaserGame } from './game/PhaserGame';
 import { OverlayModals } from './components/OverlayModals';
 import { EventBus } from './game/EventBus';
+import { Website } from './pages/Website';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
   const phaserRef = useRef<IRefPhaserGame | null>(null);
   const [isGameRunning, setIsGameRunning] = useState(false);
+  const [showWebsite, setShowWebsite] = useState(false);
   const [score, setScore] = useState(0);
   const [coinCount, setCoinCount] = useState(0);
   const [playerHP, setPlayerHP] = useState(3);
@@ -44,7 +46,9 @@ function App() {
   return (
     <div className="w-screen h-screen bg-hackathon-bg flex items-center justify-center font-pixel relative overflow-hidden">
       <AnimatePresence mode="wait">
-        {!isGameRunning ? (
+        {showWebsite ? (
+          <Website />
+        ) : !isGameRunning ? (
           <motion.div
             key="start-screen"
             initial={{ opacity: 0 }}
@@ -125,24 +129,64 @@ function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.9 }}
-                className="text-[10px] md:text-xs text-gray-400 max-w-md leading-relaxed px-4"
+                className="text-[10px] md:text-xs text-gray-400 max-w-2xl leading-relaxed px-4"
               >
                 Navigate a retro platformer world. Defeat the Glitch Overlord.
                 Register your team for the ultimate hackathon experience.
               </motion.p>
 
-              {/* CTA Button */}
-              <motion.button
-                initial={{ y: 30, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1.2, type: 'spring' }}
-                onClick={() => setIsGameRunning(true)}
-                className="pixel-btn text-sm md:text-lg pulse-glow mt-4"
+              {/* Hackathon Details */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0 }}
+                className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 max-w-2xl"
               >
-                ▶ START GAME
-              </motion.button>
+                <div className="pixel-card text-center">
+                  <div className="text-hackathon-primary text-lg mb-1">🏆</div>
+                  <div className="text-[8px] text-hackathon-secondary">PRIZES</div>
+                  <div className="text-[10px] text-white mt-1">$5000+</div>
+                </div>
+                <div className="pixel-card text-center">
+                  <div className="text-hackathon-accent text-lg mb-1">👥</div>
+                  <div className="text-[8px] text-hackathon-secondary">TEAMS</div>
+                  <div className="text-[10px] text-white mt-1">1-4 MEMBERS</div>
+                </div>
+                <div className="pixel-card text-center">
+                  <div className="text-blue-400 text-lg mb-1">⏱️</div>
+                  <div className="text-[8px] text-hackathon-secondary">DURATION</div>
+                  <div className="text-[10px] text-white mt-1">24 HOURS</div>
+                </div>
+                <div className="pixel-card text-center">
+                  <div className="text-yellow-400 text-lg mb-1">🎯</div>
+                  <div className="text-[8px] text-hackathon-secondary">THEME</div>
+                  <div className="text-[10px] text-white mt-1">RETRO TECH</div>
+                </div>
+              </motion.div>
 
-              {/* How to Play */}
+              {/* CTA Buttons */}
+              <div className="flex flex-col md:flex-row gap-4 mt-4">
+                <motion.button
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 1.2, type: 'spring' }}
+                  onClick={() => setIsGameRunning(true)}
+                  className="pixel-btn text-sm md:text-lg pulse-glow"
+                >
+                  ▶ START GAME
+                </motion.button>
+                <motion.button
+                  initial={{ y: 30, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 1.3, type: 'spring' }}
+                  onClick={() => setShowWebsite(true)}
+                  className="pixel-btn text-sm md:text-lg bg-hackathon-secondary text-black"
+                >
+                  ⊳ SKIP TO WEBSITE
+                </motion.button>
+              </div>
+
+              {/* How to Play / Info Toggle */}
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -150,7 +194,7 @@ function App() {
                 onClick={() => setShowInstructions(!showInstructions)}
                 className="text-[8px] md:text-[10px] text-hackathon-secondary hover:text-white transition-colors cursor-pointer underline underline-offset-4 mt-2"
               >
-                {showInstructions ? '▲ HIDE CONTROLS' : '▼ HOW TO PLAY'}
+                {showInstructions ? '▲ HIDE INFO' : '▼ GAME INFO & RULES'}
               </motion.button>
 
               <AnimatePresence>
@@ -161,22 +205,54 @@ function App() {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="pixel-card text-left text-[8px] md:text-[10px] leading-loose mt-2 max-w-sm">
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                        <span className="text-hackathon-secondary">MOVE</span>
-                        <span>← → or A D</span>
-                        <span className="text-hackathon-secondary">JUMP</span>
-                        <span>↑ W or SPACE</span>
-                        <span className="text-hackathon-secondary">ATTACK</span>
-                        <span>F (near boss)</span>
-                        <span className="text-hackathon-secondary">INTERACT</span>
-                        <span>↓ S (on pipes)</span>
+                    <div className="pixel-card text-left text-[8px] md:text-[10px] leading-loose mt-2 max-w-2xl">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Controls */}
+                        <div>
+                          <p className="text-hackathon-primary mb-2 text-[10px]">⌨️ CONTROLS</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-hackathon-secondary">MOVE</span>
+                              <span>← → or A D</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-hackathon-secondary">JUMP</span>
+                              <span>↑ W or SPACE</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-hackathon-secondary">ATTACK</span>
+                              <span>F (near boss)</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-hackathon-secondary">INTERACT</span>
+                              <span>↓ S (on pipes)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Hackathon Info */}
+                        <div>
+                          <p className="text-hackathon-accent mb-2 text-[10px]">🎮 HACKATHON INFO</p>
+                          <div className="space-y-1 text-gray-300">
+                            <p>📍 Location: Virtual</p>
+                            <p>📅 Date: March 22-23, 2026</p>
+                            <p>🌐 Register: quantum-mesh.dev</p>
+                            <p>💬 Discord: community.link</p>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Tips */}
                       <div className="mt-4 pt-3 border-t border-white/10">
-                        <p className="text-hackathon-primary">TIPS:</p>
-                        <p className="text-gray-400 mt-1">• Stomp enemies from above</p>
-                        <p className="text-gray-400">• Collect coins for bonus score</p>
-                        <p className="text-gray-400">• Hit ? blocks from below</p>
+                        <p className="text-hackathon-primary mb-2 text-[10px]">💡 TIPS</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-gray-400">
+                          <p>• Stomp enemies from above</p>
+                          <p>• Collect coins for bonus score</p>
+                          <p>• Hit ? blocks from below</p>
+                          <p>• Find secret passages</p>
+                          <p>• Boss appears at level end</p>
+                          <p>• Register after victory!</p>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
