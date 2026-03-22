@@ -1083,14 +1083,12 @@ export class Game extends Scene {
         }
 
         // Player attack: F key fires fireball
-        if (this.player && this.fKey && Phaser.Input.Keyboard.JustDown(this.fKey)) {
-            this.fireFireball();
-        }
+        // Removed - fireball system disabled
 
-        // Boss interaction: fireball collision handled in startBossFight
+        // Boss interaction
         if (this.player && this.boss && this.boss.active && !this.bossDead) {
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
-            if (dist > 300) {
+            if (dist < 200) {
                 this.bossText.setText('PRESS F TO ATTACK!');
             }
         }
