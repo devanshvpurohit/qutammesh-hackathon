@@ -312,6 +312,8 @@ export class Game extends Scene {
             "....0...."
         ], 4);
     }
+
+    create() {
         // World setup
         const worldWidth = 6000;
         const worldHeight = 768;
