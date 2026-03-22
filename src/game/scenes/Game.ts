@@ -32,7 +32,6 @@ export class Game extends Scene {
     private bossHealthBarBG!: Phaser.GameObjects.Rectangle;
     private bossHealthBarFill!: Phaser.GameObjects.Rectangle;
     private bossNameText!: Phaser.GameObjects.Text;
-    private playerProjectiles!: Phaser.Physics.Arcade.Group;
 
     constructor() {
         super('Game');
@@ -269,48 +268,6 @@ export class Game extends Scene {
             "012210",
             ".0000."
         ], 6);
-
-        // Player Fireball (8x8)
-        this.generatePixelArt('fireball', {
-            '0': 0x000000, '1': 0xff6b35, '2': 0xfbbf24, '3': 0xfef08a
-        }, [
-            "..0000..",
-            ".012210.",
-            "01233210",
-            "01233210",
-            "01233210",
-            "01233210",
-            ".012210.",
-            "..0000.."
-        ], 5);
-
-        // Pixel Heart (8x8)
-        this.generatePixelArt('heart', {
-            '0': 0x000000, '1': 0xff6b6b, '2': 0xff0000
-        }, [
-            ".01110110.",
-            "0122222210",
-            "0122222210",
-            "0122222210",
-            ".0122220.",
-            "..012210.",
-            "...0120..",
-            "....0...."
-        ], 4);
-
-        // Pixel Empty Heart (8x8)
-        this.generatePixelArt('heart_empty', {
-            '0': 0x000000, '1': 0x444444, '2': 0x222222
-        }, [
-            ".01110110.",
-            "0122222210",
-            "0122222210",
-            "0122222210",
-            ".0122220.",
-            "..012210.",
-            "...0120..",
-            "....0...."
-        ], 4);
     }
 
     create() {
@@ -352,7 +309,6 @@ export class Game extends Scene {
         this.coins = this.physics.add.group();
         this.enemies = this.physics.add.group();
         this.bossProjectiles = this.physics.add.group();
-        this.playerProjectiles = this.physics.add.group();
 
         // 1. Ground floor stretching across entire level
         const groundY = worldHeight - 32;
@@ -385,29 +341,6 @@ export class Game extends Scene {
         // Boss projectile collision
         this.physics.add.overlap(this.player, this.bossProjectiles, this.hitProjectile, undefined, this);
 
-        // Player fireball collision with enemies
-        this.physics.add.overlap(this.playerProjectiles, this.enemies, (fireball: any, enemy: any) => {
-            fireball.destroy();
-            enemy.destroy();
-            this.score += 300;
-            EventBus.emit('update-score', this.score);
-            this.cameras.main.shake(100, 0.01);
-
-            // Explosion effect
-            const explosionText = this.add.text(enemy.x, enemy.y, '💥', {
-                fontSize: '24px'
-            }).setOrigin(0.5);
-            this.tweens.add({
-                targets: explosionText,
-                scale: 2,
-                alpha: 0,
-                duration: 400,
-                onComplete: () => { explosionText.destroy(); }
-            });
-        });
-
-        // Player projectile collision with boss (will be set up in startBossFight)
-
         // Create the zones
         this.buildZones();
 
@@ -422,36 +355,25 @@ export class Game extends Scene {
     }
 
     createHUD() {
-        // Hearts on the RIGHT side - using pixel art
+        // Hearts on the RIGHT side
         const camWidth = this.cameras.main.width;
         for (let i = 0; i < this.playerMaxHP; i++) {
-            const heart = this.add.sprite(camWidth - 50 - i * 40, 50, 'heart')
+            const heart = this.add.text(camWidth - 50 - i * 36, 50, '❤️', { fontSize: '20px' })
                 .setScrollFactor(0)
-                .setDepth(100)
-                .setScale(1.5);
-            this.hearts.push(heart as any);
+                .setDepth(100);
+            this.hearts.push(heart);
         }
 
         // Coin counter (in-game, small, top-left area below score)
         this.coinText = this.add.text(30, 70, '🪙 x0', {
             fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#facc15'
         }).setScrollFactor(0).setDepth(100);
-
-        // Attack instruction
-        this.add.text(30, 100, 'F: FIREBALL', {
-            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ff6b35'
-        }).setScrollFactor(0).setDepth(100);
     }
 
     updateHUD() {
-        // Update hearts - use full heart or empty heart sprite
+        // Update hearts
         for (let i = 0; i < this.hearts.length; i++) {
-            const heart = this.hearts[i] as any;
-            if (i < this.playerHP) {
-                heart.setTexture('heart');
-            } else {
-                heart.setTexture('heart_empty');
-            }
+            this.hearts[i].setText(i < this.playerHP ? '❤️' : '🖤');
         }
         // Update coins
         this.coinText.setText('🪙 x' + this.coinCount);
@@ -891,12 +813,6 @@ export class Game extends Scene {
         this.bossHealthBarBG.setVisible(true);
         this.bossHealthBarFill.setVisible(true);
 
-        // Player projectile collision with boss
-        this.physics.add.overlap(this.playerProjectiles, this.boss, (projectile: any) => {
-            projectile.destroy();
-            this.damageBoss();
-        });
-
         // Camera zoom for drama
         this.cameras.main.setZoom(1.0);
         this.cameras.main.flash(400, 150, 50, 200);
@@ -1021,41 +937,6 @@ export class Game extends Scene {
                     });
                 }
             });
-        });
-    }
-
-    fireFireball() {
-        if (!this.player) return;
-
-        // Create fireball projectile
-        const fireball = this.playerProjectiles.create(
-            this.player.x + (this.player.flipX ? -30 : 30),
-            this.player.y - 10,
-            'fireball'
-        ) as Phaser.Physics.Arcade.Sprite;
-
-        if (!fireball) return;
-
-        // Set velocity based on player direction (Mario-style arc)
-        const speed = 350;
-        fireball.setVelocityX(this.player.flipX ? -speed : speed);
-        fireball.setVelocityY(-100); // Stronger upward arc like Mario
-
-        // Bounce effect
-        fireball.setBounce(0.8);
-        fireball.setCollideWorldBounds(true);
-
-        // Spin animation (Mario-style)
-        this.tweens.add({
-            targets: fireball,
-            angle: 360,
-            repeat: -1,
-            duration: 300
-        });
-
-        // Auto-destroy after 5 seconds
-        this.time.delayedCall(5000, () => {
-            if (fireball && fireball.active) fireball.destroy();
         });
     }
 
