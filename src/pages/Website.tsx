@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type Page = 'about' | 'themes' | 'schedule' | 'register';
-type Currency = 'usd' | 'inr';
 
 export function Website() {
   const [currentPage, setCurrentPage] = useState<Page>('about');
-  const [currency, setCurrency] = useState<Currency>('usd');
 
   const navItems: { id: Page; label: string }[] = [
     { id: 'about', label: 'ABOUT' },
@@ -21,28 +19,12 @@ export function Website() {
       <div className="bg-hackathon-surface border-b-4 border-white z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl md:text-3xl text-hackathon-primary glow-text">QUANTUM MESH</h1>
-          <div className="flex gap-4 items-center">
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrency('usd')}
-                className={`pixel-btn text-xs ${currency === 'usd' ? 'bg-hackathon-primary text-black' : 'bg-hackathon-surface text-hackathon-primary border-2 border-hackathon-primary'}`}
-              >
-                USD
-              </button>
-              <button
-                onClick={() => setCurrency('inr')}
-                className={`pixel-btn text-xs ${currency === 'inr' ? 'bg-hackathon-primary text-black' : 'bg-hackathon-surface text-hackathon-primary border-2 border-hackathon-primary'}`}
-              >
-                INR
-              </button>
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="pixel-btn text-xs md:text-sm"
-            >
-              ← BACK TO GAME
-            </button>
-          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="pixel-btn text-xs md:text-sm"
+          >
+            ← BACK TO GAME
+          </button>
         </div>
       </div>
 
@@ -100,12 +82,12 @@ export function Website() {
                   <div className="pixel-card text-center">
                     <div className="text-3xl mb-2">🏆</div>
                     <div className="text-hackathon-secondary text-sm mb-2">PRIZES</div>
-                    <div className="text-white">$5000+</div>
+                    <div className="text-white">₹5,00,000+</div>
                   </div>
                   <div className="pixel-card text-center">
-                    <div className="text-3xl mb-2">👥</div>
-                    <div className="text-hackathon-secondary text-sm mb-2">TEAM SIZE</div>
-                    <div className="text-white">1-4 Members</div>
+                    <div className="text-3xl mb-2">�</div>
+                    <div className="text-hackathon-secondary text-sm mb-2">LOCATION</div>
+                    <div className="text-white">IARE, Hyderabad</div>
                   </div>
                 </div>
 
@@ -319,20 +301,19 @@ export function Website() {
                     <h3 className="text-2xl text-hackathon-secondary mb-4">📋 REGISTRATION DETAILS</h3>
                     <div className="space-y-3 text-gray-300">
                       <p><span className="text-hackathon-primary">Team Size:</span> 1-4 members</p>
-                      <p><span className="text-hackathon-primary">Cost per Head:</span> {currency === 'usd' ? '$50' : '₹250'}</p>
+                      <p><span className="text-hackathon-primary">Cost per Head:</span> ₹250</p>
                       <p><span className="text-hackathon-primary">Deadline:</span> April 25, 2026</p>
-                      <p><span className="text-hackathon-primary">Format:</span> Virtual & In-Person</p>
+                      <p><span className="text-hackathon-primary">Format:</span> In-Person</p>
                     </div>
                   </div>
 
                   <div className="pixel-card">
-                    <h3 className="text-2xl text-hackathon-accent mb-4">🎯 REQUIREMENTS</h3>
+                    <h3 className="text-2xl text-hackathon-accent mb-4">📍 VENUE</h3>
                     <div className="space-y-2 text-gray-300 text-sm">
-                      <p>✓ Valid email address</p>
-                      <p>✓ Team name</p>
-                      <p>✓ Team member names</p>
-                      <p>✓ Experience level</p>
-                      <p>✓ Agree to Code of Conduct</p>
+                      <p><span className="text-hackathon-primary">College:</span> IARE</p>
+                      <p><span className="text-hackathon-primary">Full Name:</span> Institute of Aeronautical Engineering</p>
+                      <p><span className="text-hackathon-primary">City:</span> Hyderabad</p>
+                      <p><span className="text-hackathon-primary">State:</span> Telangana, India</p>
                     </div>
                   </div>
                 </div>
@@ -344,25 +325,19 @@ export function Website() {
                     <div className="bg-hackathon-surface border-4 border-yellow-400 p-6 text-center">
                       <div className="text-4xl mb-3">🥇</div>
                       <div className="text-yellow-400 font-bold mb-2 text-lg">1ST PLACE</div>
-                      <div className="text-3xl text-white">
-                        {currency === 'usd' ? '$2500' : '₹2,00,000'}
-                      </div>
+                      <div className="text-3xl text-white">₹2,00,000</div>
                       <p className="text-gray-400 text-xs mt-2">+ Trophies</p>
                     </div>
                     <div className="bg-hackathon-surface border-4 border-gray-400 p-6 text-center">
                       <div className="text-4xl mb-3">🥈</div>
                       <div className="text-gray-400 font-bold mb-2 text-lg">2ND PLACE</div>
-                      <div className="text-3xl text-white">
-                        {currency === 'usd' ? '$1500' : '₹1,20,000'}
-                      </div>
+                      <div className="text-3xl text-white">₹1,20,000</div>
                       <p className="text-gray-400 text-xs mt-2">+ Trophies</p>
                     </div>
                     <div className="bg-hackathon-surface border-4 border-orange-600 p-6 text-center">
                       <div className="text-4xl mb-3">🥉</div>
                       <div className="text-orange-600 font-bold mb-2 text-lg">3RD PLACE</div>
-                      <div className="text-3xl text-white">
-                        {currency === 'usd' ? '$1000' : '₹80,000'}
-                      </div>
+                      <div className="text-3xl text-white">₹80,000</div>
                       <p className="text-gray-400 text-xs mt-2">+ Trophies</p>
                     </div>
                   </div>
