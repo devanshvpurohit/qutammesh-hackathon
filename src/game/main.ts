@@ -5,13 +5,15 @@ import { Game } from './scenes/Game';
 // https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
-    width: 1024,
-    height: 768,
+    width: window.innerWidth,
+    height: window.innerHeight,
     parent: 'game-container',
     backgroundColor: '#1e1b4b',
     scale: {
-        mode: Scale.FIT,
-        autoCenter: Scale.CENTER_BOTH
+        mode: Scale.RESIZE,
+        autoCenter: Scale.CENTER_BOTH,
+        fullscreenTarget: 'parent',
+        expandParent: true
     },
     physics: {
         default: 'arcade',

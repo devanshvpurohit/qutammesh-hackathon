@@ -47,10 +47,10 @@ const DialogueBox = ({ data, onDone }: { data: ModalData; onDone: () => void }) 
 
     return (
         <motion.div
-            initial={{ y: 50, opacity: 0 }}
-            animate={isExiting ? { y: 20, opacity: 0 } : { y: 0, opacity: 1 }}
+            initial={{ y: -100, opacity: 0 }}
+            animate={isExiting ? { y: -100, opacity: 0 } : { y: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="w-[90%] max-w-2xl mx-auto absolute bottom-8 left-0 right-0 z-40 pointer-events-none"
+            className="w-[90%] max-w-2xl mx-auto absolute top-8 left-0 right-0 z-40 pointer-events-none"
         >
             <div
                 className="relative bg-black/50 backdrop-blur-lg text-white px-6 py-5 font-pixel leading-loose"
