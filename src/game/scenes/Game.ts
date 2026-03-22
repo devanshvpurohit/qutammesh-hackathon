@@ -13,6 +13,7 @@ export class Game extends Scene {
     private bossDead: boolean = false;
     private fKey!: Phaser.Input.Keyboard.Key;
     private inputActive: boolean = true;
+    private dayNightCycle: number = 0; // 0-1, where 0.5 is noon
 
     // NEW: Game systems
     private playerHP: number = 3;
@@ -35,6 +36,47 @@ export class Game extends Scene {
 
     constructor() {
         super('Game');
+    }
+
+    private getTimeOfDayColor(): string {
+        // Get current hour (0-23)
+        const hour = new Date().getHours();
+        const minute = new Date().getMinutes();
+        const timeInMinutes = hour * 60 + minute;
+        
+        // Map time to cycle (0-1)
+        // 6 AM = 0 (dawn), 12 PM = 0.5 (noon), 6 PM = 1 (dusk), 12 AM = 0 (night)
+        const cycleTime = (timeInMinutes % 1440) / 1440; // 1440 = 24 hours in minutes
+        
+        // Define colors for different times
+        let color: string;
+        
+        if (cycleTime < 0.25) {
+            // 12 AM - 6 AM: Night to Dawn (dark purple to orange)
+            const t = cycleTime / 0.25;
+            color = this.interpolateColor('#0a0010', '#ff6b35', t);
+        } else if (cycleTime < 0.5) {
+            // 6 AM - 12 PM: Dawn to Noon (orange to bright cyan)
+            const t = (cycleTime - 0.25) / 0.25;
+            color = this.interpolateColor('#ff6b35', '#87ceeb', t);
+        } else if (cycleTime < 0.75) {
+            // 12 PM - 6 PM: Noon to Dusk (bright cyan to orange)
+            const t = (cycleTime - 0.5) / 0.25;
+            color = this.interpolateColor('#87ceeb', '#ff6b35', t);
+        } else {
+            // 6 PM - 12 AM: Dusk to Night (orange to dark purple)
+            const t = (cycleTime - 0.75) / 0.25;
+            color = this.interpolateColor('#ff6b35', '#0a0010', t);
+        }
+        
+        return color;
+    }
+
+    private interpolateColor(color1: string, color2: string, t: number): string {
+        const c1 = Phaser.Display.Color.HexStringToColor(color1);
+        const c2 = Phaser.Display.Color.HexStringToColor(color2);
+        const c = Phaser.Display.Color.Interpolate.ColorWithColor(c1, c2, 100, t * 100);
+        return '#' + Phaser.Display.Color.RGBToString(c.r, c.g, c.b, 0, '#');
     }
 
     private generatePixelArt(key: string, palette: Record<string, number>, pixels: string[], scale: number = 4) {
@@ -244,7 +286,7 @@ export class Game extends Scene {
         });
 
         // Background (Parallax) with gradient effect
-        this.cameras.main.setBackgroundColor('#0f0620'); // Darker purple fantasy sky
+        this.cameras.main.setBackgroundColor(this.getTimeOfDayColor()); // Dynamic color based on time
 
         // Add clouds with better parallax
         this.backgroundClouds = this.add.tileSprite(0, 100, worldWidth, 400, 'cloud_placeholder')
@@ -1002,10 +1044,13 @@ export class Game extends Scene {
         if (this.player) {
             this.player.update();
 
+            // Update background color based on time of day
+            const baseColor = this.getTimeOfDayColor();
+
             // Background Color Shift on Boss approach
             if (this.player.x > 4300) {
                 const progress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
-                const startColor = Phaser.Display.Color.HexStringToColor('#0f0620');
+                const startColor = Phaser.Display.Color.HexStringToColor(baseColor);
                 const endColor = Phaser.Display.Color.HexStringToColor('#0a0010');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
@@ -1015,7 +1060,7 @@ export class Game extends Scene {
                 const targetZoom = 1.15 - (zoomProgress * 0.25); // Zoom from 1.15 to 0.9
                 this.cameras.main.setZoom(targetZoom);
             } else {
-                this.cameras.main.setBackgroundColor('#0f0620');
+                this.cameras.main.setBackgroundColor(baseColor);
                 this.cameras.main.setZoom(1.15);
             }
 
