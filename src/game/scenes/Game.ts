@@ -11,7 +11,6 @@ export class Game extends Scene {
     private boss!: Phaser.Physics.Arcade.Sprite;
     private bossText!: Phaser.GameObjects.Text;
     private bossDead: boolean = false;
-    private fKey!: Phaser.Input.Keyboard.Key;
     private inputActive: boolean = true;
 
     // NEW: Game systems
@@ -343,10 +342,6 @@ export class Game extends Scene {
 
         // Create the zones
         this.buildZones();
-
-        if (this.input.keyboard) {
-            this.fKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
-        }
 
         // HUD (Fixed to camera)
         this.createHUD();
