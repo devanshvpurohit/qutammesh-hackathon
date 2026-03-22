@@ -385,6 +385,27 @@ export class Game extends Scene {
         // Boss projectile collision
         this.physics.add.overlap(this.player, this.bossProjectiles, this.hitProjectile, undefined, this);
 
+        // Player fireball collision with enemies
+        this.physics.add.overlap(this.playerProjectiles, this.enemies, (fireball: any, enemy: any) => {
+            fireball.destroy();
+            enemy.destroy();
+            this.score += 300;
+            EventBus.emit('update-score', this.score);
+            this.cameras.main.shake(100, 0.01);
+
+            // Explosion effect
+            const explosionText = this.add.text(enemy.x, enemy.y, '💥', {
+                fontSize: '24px'
+            }).setOrigin(0.5);
+            this.tweens.add({
+                targets: explosionText,
+                scale: 2,
+                alpha: 0,
+                duration: 400,
+                onComplete: () => { explosionText.destroy(); }
+            });
+        });
+
         // Player projectile collision with boss (will be set up in startBossFight)
 
         // Create the zones
@@ -1013,43 +1034,28 @@ export class Game extends Scene {
             'fireball'
         ) as Phaser.Physics.Arcade.Sprite;
 
-        // Set velocity based on player direction
-        const speed = 400;
-        fireball.setVelocityX(this.player.flipX ? -speed : speed);
-        fireball.setVelocityY(-50); // Slight upward arc
+        if (!fireball) return;
 
-        // Spin animation
+        // Set velocity based on player direction (Mario-style arc)
+        const speed = 350;
+        fireball.setVelocityX(this.player.flipX ? -speed : speed);
+        fireball.setVelocityY(-100); // Stronger upward arc like Mario
+
+        // Bounce effect
+        fireball.setBounce(0.8);
+        fireball.setCollideWorldBounds(true);
+
+        // Spin animation (Mario-style)
         this.tweens.add({
             targets: fireball,
             angle: 360,
             repeat: -1,
-            duration: 400
+            duration: 300
         });
 
-        // Auto-destroy after 4 seconds
-        this.time.delayedCall(4000, () => {
-            if (fireball.active) fireball.destroy();
-        });
-
-        // Collision with enemies
-        this.physics.add.overlap(fireball, this.enemies, (fb: any, enemy: any) => {
-            fb.destroy();
-            enemy.destroy();
-            this.score += 300;
-            EventBus.emit('update-score', this.score);
-            this.cameras.main.shake(100, 0.01);
-
-            // Explosion effect
-            const explosionText = this.add.text(enemy.x, enemy.y, '💥', {
-                fontSize: '24px'
-            }).setOrigin(0.5);
-            this.tweens.add({
-                targets: explosionText,
-                scale: 2,
-                alpha: 0,
-                duration: 400,
-                onComplete: () => { explosionText.destroy(); }
-            });
+        // Auto-destroy after 5 seconds
+        this.time.delayedCall(5000, () => {
+            if (fireball && fireball.active) fireball.destroy();
         });
     }
 
