@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type Page = 'about' | 'themes' | 'schedule' | 'register';
+type Page = 'about' | 'themes' | 'schedule' | 'location' | 'register';
 
 export function Website() {
   const [currentPage, setCurrentPage] = useState<Page>('about');
@@ -10,6 +10,7 @@ export function Website() {
     { id: 'about', label: 'ABOUT' },
     { id: 'themes', label: 'THEMES' },
     { id: 'schedule', label: 'SCHEDULE' },
+    { id: 'location', label: 'LOCATION' },
     { id: 'register', label: 'REGISTER' },
   ];
 
@@ -274,6 +275,103 @@ export function Website() {
                     <div className="flex justify-between items-center">
                       <span className="text-hackathon-accent font-bold">2:00 PM</span>
                       <span className="text-gray-300">Awards Ceremony & Closing</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {currentPage === 'location' && (
+              <motion.div
+                key="location"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div className="text-center mb-12">
+                  <h2 className="text-4xl md:text-5xl text-hackathon-primary glow-text mb-4">
+                    VENUE LOCATION
+                  </h2>
+                  <div className="gradient-underline w-48 md:w-64 mx-auto rounded-full" />
+                </motion.div>
+
+                {/* Venue Details */}
+                <div className="pixel-card mb-8">
+                  <h3 className="text-2xl text-hackathon-secondary mb-6">📍 IARE - HYDERABAD</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="text-hackathon-primary mb-4 text-lg">INSTITUTE DETAILS</h4>
+                      <div className="space-y-3 text-gray-300">
+                        <p><span className="text-hackathon-secondary">Full Name:</span></p>
+                        <p className="ml-4">Institute of Aeronautical Engineering</p>
+                        <p className="mt-4"><span className="text-hackathon-secondary">Location:</span></p>
+                        <p className="ml-4">Hyderabad, Telangana, India</p>
+                        <p className="mt-4"><span className="text-hackathon-secondary">Event Date:</span></p>
+                        <p className="ml-4">May 1-2, 2026</p>
+                        <p className="mt-4"><span className="text-hackathon-secondary">Format:</span></p>
+                        <p className="ml-4">In-Person Hackathon</p>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-hackathon-accent mb-4 text-lg">WHY IARE?</h4>
+                      <div className="space-y-2 text-gray-300 text-sm">
+                        <p>✓ State-of-the-art facilities</p>
+                        <p>✓ Excellent infrastructure</p>
+                        <p>✓ Central location in Hyderabad</p>
+                        <p>✓ Easy accessibility</p>
+                        <p>✓ Spacious campus for events</p>
+                        <p>✓ On-campus accommodation available</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Map Section */}
+                <div className="pixel-card mb-8">
+                  <h3 className="text-2xl text-hackathon-primary mb-4">🗺️ FIND US ON MAP</h3>
+                  <div className="bg-hackathon-surface border-2 border-white/30 p-4 mb-4">
+                    <iframe
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3806.5555555555556!2d78.7!3d17.3!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x65666fa3c4a256d2!2sInstitute%20of%20Aeronautical%20Engineering!5e0!3m2!1sen!2sin!4v1234567890"
+                      width="100%"
+                      height="400"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                  <a
+                    href="https://www.google.com/maps/place/Institute+of+Aeronautical+Engineering/data=!4m2!3m1!1s0x0:0x65666fa3c4a256d2?sa=X&ved=1t:2428&ictx=111"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pixel-btn text-lg pulse-glow inline-block"
+                  >
+                    OPEN IN GOOGLE MAPS
+                  </a>
+                </div>
+
+                {/* Getting There */}
+                <div className="pixel-card">
+                  <h3 className="text-2xl text-hackathon-accent mb-6">🚗 GETTING THERE</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="border-l-4 border-hackathon-primary pl-4">
+                      <p className="text-hackathon-primary font-bold mb-2">✈️ BY AIR</p>
+                      <p className="text-gray-300 text-sm">
+                        Rajiv Gandhi International Airport is ~30km away. Taxis and cabs available.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-hackathon-secondary pl-4">
+                      <p className="text-hackathon-secondary font-bold mb-2">🚌 BY BUS</p>
+                      <p className="text-gray-300 text-sm">
+                        Well-connected by TSRTC and private buses. Direct routes from city center.
+                      </p>
+                    </div>
+                    <div className="border-l-4 border-hackathon-accent pl-4">
+                      <p className="text-hackathon-accent font-bold mb-2">🚕 BY CAB</p>
+                      <p className="text-gray-300 text-sm">
+                        Uber, Ola, and local taxis available. Easy pickup and drop-off points.
+                      </p>
                     </div>
                   </div>
                 </div>
