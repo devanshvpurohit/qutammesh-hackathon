@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { PhaserGame } from './game/PhaserGame';
 import type { IRefPhaserGame } from './game/PhaserGame';
 import { OverlayModals } from './components/OverlayModals';
-import { EventBus } from './game/EventBus';
 import { Website } from './pages/Website';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,24 +9,7 @@ function App() {
   const phaserRef = useRef<IRefPhaserGame | null>(null);
   const [isGameRunning, setIsGameRunning] = useState(false);
   const [showWebsite, setShowWebsite] = useState(false);
-  const [score, setScore] = useState(0);
-  const [coinCount, setCoinCount] = useState(0);
-  const [playerHP, setPlayerHP] = useState(3);
   const [showInstructions, setShowInstructions] = useState(false);
-
-  useEffect(() => {
-    const updateScore = (newScore: number) => setScore(newScore);
-    const updateCoins = (count: number) => setCoinCount(count);
-    const updateHP = (hp: number) => setPlayerHP(hp);
-    EventBus.on('update-score', updateScore);
-    EventBus.on('update-coins', updateCoins);
-    EventBus.on('update-hp', updateHP);
-    return () => {
-      EventBus.removeListener('update-score', updateScore);
-      EventBus.removeListener('update-coins', updateCoins);
-      EventBus.removeListener('update-hp', updateHP);
-    }
-  }, []);
 
   const onActiveScene = (scene: Phaser.Scene) => {
     console.log('Scene started:', scene.scene.key);
@@ -94,7 +76,7 @@ function App() {
                   WELCOME TO
                 </div>
                 <h1 className="text-3xl md:text-5xl lg:text-6xl text-hackathon-primary glow-text leading-tight">
-                  QUANTUM MESH
+                  CODE<br />QUEST
                 </h1>
                 <div className="gradient-underline w-48 md:w-64 mt-4 rounded-full" />
               </motion.div>
@@ -266,7 +248,7 @@ function App() {
                 transition={{ delay: 1.6 }}
                 className="absolute -bottom-24 text-[7px] text-gray-600"
               >
-                BUILT WITH PHASER 3 + REACT • © 2026 QUANTUM MESH
+                BUILT WITH PHASER 3 + REACT • © 2026 CODEQUEST
               </motion.div>
             </div>
           </motion.div>
@@ -280,28 +262,7 @@ function App() {
             <PhaserGame ref={phaserRef} currentActiveScene={onActiveScene} />
             <OverlayModals />
 
-            {/* Zelda-Style Floating HUD */}
-            <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none p-6">
-              <div className="flex justify-between items-start max-w-6xl mx-auto">
-                {/* LIVES (Top Left) */}
-                <div className="flex gap-1.5" style={{ filter: 'drop-shadow(2px 2px 0px rgba(0,0,0,1))' }}>
-                  {Array.from({ length: 3 }, (_, i) => i < playerHP ? '❤️' : '🖤').map((heart, idx) => (
-                    <span key={idx} className="text-2xl">{heart}</span>
-                  ))}
-                </div>
 
-                {/* RUPEES & SCORE (Top Right) */}
-                <div className="flex flex-col items-end gap-1.5 text-white font-pixel" style={{ textShadow: '2px 2px 0px rgba(0,0,0,1)' }}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">💎</span>
-                    <span className="text-xl">{(coinCount).toString().padStart(3, '0')}</span>
-                  </div>
-                  <div className="text-[10px] text-yellow-400 tracking-widest mt-1 opacity-90">
-                    SCORE {score.toString().padStart(6, '0')}
-                  </div>
-                </div>
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

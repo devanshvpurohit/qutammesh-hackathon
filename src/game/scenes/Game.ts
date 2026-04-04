@@ -13,15 +13,28 @@ export class Game extends Scene {
     private bossDead: boolean = false;
     private inputActive: boolean = true;
 
-    // NEW: Game systems
-    private playerHP: number = 3;
-    private playerMaxHP: number = 3;
+    // ── Damage / Lives system ─────────────────────────────
+    private playerHP: number   = 5;          // HP within a life
+    private playerMaxHP: number = 5;
+    private playerLives: number = 3;          // total lives
     private invincible: boolean = false;
-    private hearts: Phaser.GameObjects.Text[] = [];
+    private isDead: boolean     = false;      // mid-death-animation flag
+
+    // HUD elements
+    private hpSegments: Phaser.GameObjects.Rectangle[] = [];  // filled segments
+    private hpSegBGs:   Phaser.GameObjects.Rectangle[] = [];  // bg segments
+    private livesText!: Phaser.GameObjects.Text;
+    private vignetteOverlay!: Phaser.GameObjects.Rectangle;   // full-screen red flash
+    private lowHpWarningTimer: Phaser.Time.TimerEvent | null = null;
+    private gameOverShowing: boolean = false;
+
+    // ── Coins / Enemies ───────────────────────────────────
     private coins!: Phaser.Physics.Arcade.Group;
     private coinCount: number = 0;
     private coinText!: Phaser.GameObjects.Text;
     private enemies!: Phaser.Physics.Arcade.Group;
+
+    // ── Boss ──────────────────────────────────────────────
     private bossHP: number = 5;
     private bossMaxHP: number = 5;
     private bossPhase: number = 1;
@@ -31,6 +44,12 @@ export class Game extends Scene {
     private bossHealthBarBG!: Phaser.GameObjects.Rectangle;
     private bossHealthBarFill!: Phaser.GameObjects.Rectangle;
     private bossNameText!: Phaser.GameObjects.Text;
+
+    // ── Attack system ─────────────────────────────────────
+    private fireballs!: Phaser.Physics.Arcade.Group;
+    private combo: number = 0;
+    private comboTimer: Phaser.Time.TimerEvent | null = null;
+    private comboText!: Phaser.GameObjects.Text;
 
     constructor() {
         super('Game');
@@ -267,6 +286,20 @@ export class Game extends Scene {
             "012210",
             ".0000."
         ], 6);
+
+        // Player Fireball (8x8)
+        this.generatePixelArt('fireball', {
+            '0': 0x000000, '1': 0xff4400, '2': 0xffaa00, '3': 0xffff88
+        }, [
+            "..0000..",
+            ".011110.",
+            "01233210",
+            "01233310",
+            "01333210",
+            "01233110",
+            ".011110.",
+            "..0000.."
+        ], 4);
     }
 
     create() {
@@ -303,11 +336,15 @@ export class Game extends Scene {
         }
 
         // Build World Layers
-        this.platforms = this.physics.add.staticGroup();
-        this.triggers = this.physics.add.staticGroup();
-        this.coins = this.physics.add.group();
-        this.enemies = this.physics.add.group();
-        this.bossProjectiles = this.physics.add.group();
+        this.platforms      = this.physics.add.staticGroup();
+        this.triggers       = this.physics.add.staticGroup();
+        this.coins          = this.physics.add.group();
+        this.enemies        = this.physics.add.group();
+        this.bossProjectiles= this.physics.add.group();
+        this.fireballs      = this.physics.add.group({
+            classType: Phaser.Physics.Arcade.Image,
+            runChildUpdate: false,
+        });
 
         // 1. Ground floor stretching across entire level
         const groundY = worldHeight - 32;
@@ -326,7 +363,23 @@ export class Game extends Scene {
         // Setup collisions
         this.physics.add.collider(this.player, this.platforms);
         this.physics.add.collider(this.enemies, this.platforms);
-        this.physics.add.collider(this.coins, this.platforms);
+        this.physics.add.collider(this.coins,   this.platforms);
+
+        // Fireballs hit platforms (destroy)
+        this.physics.add.collider(this.fireballs, this.platforms, (fb: any) => {
+            this.spawnImpactPuff(fb.x, fb.y, 0xff6600);
+            fb.destroy();
+        });
+
+        // Fireballs hit enemies
+        this.physics.add.overlap(this.fireballs, this.enemies, (fb: any, enemy: any) => {
+            this.spawnImpactPuff(enemy.x, enemy.y, 0xff4400);
+            fb.destroy();
+            enemy.destroy();
+            this.registerKill(enemy.x, enemy.y, 150);
+        }, undefined, this);
+
+
 
         // Setup triggers
         this.physics.add.overlap(this.player, this.triggers, this.handleTrigger, undefined, this);
@@ -350,28 +403,77 @@ export class Game extends Scene {
     }
 
     createHUD() {
-        // Hearts on the RIGHT side
-        const camWidth = this.cameras.main.width;
+        const W = this.cameras.main.width;
+
+        // ── Full-screen red vignette overlay (starts invisible) ─────────────
+        this.vignetteOverlay = this.add.rectangle(W / 2, this.cameras.main.height / 2,
+            W, this.cameras.main.height, 0xff0000, 0)
+            .setScrollFactor(0).setDepth(200).setInteractive(false);
+
+        // ── HP Bar (top-left) ───────────────────────────────────────────────
+        const segW = 28, segH = 14, segGap = 4;
+        const barX = 18, barY = 18;
+        this.add.text(barX, barY, 'HP', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#aaaaaa'
+        }).setScrollFactor(0).setDepth(101);
+
         for (let i = 0; i < this.playerMaxHP; i++) {
-            const heart = this.add.text(camWidth - 50 - i * 36, 50, '❤️', { fontSize: '20px' })
-                .setScrollFactor(0)
-                .setDepth(100);
-            this.hearts.push(heart);
+            const sx = barX + 26 + i * (segW + segGap);
+            // Background slot
+            const bg = this.add.rectangle(sx, barY + 6, segW, segH, 0x330000)
+                .setOrigin(0, 0.5).setScrollFactor(0).setDepth(101)
+                .setStrokeStyle(1, 0x660000);
+            // Filled segment
+            const seg = this.add.rectangle(sx + 2, barY + 6, segW - 4, segH - 4, 0xff3333)
+                .setOrigin(0, 0.5).setScrollFactor(0).setDepth(102);
+            this.hpSegBGs.push(bg);
+            this.hpSegments.push(seg);
         }
 
-        // Coin counter (in-game, small, top-left area below score)
-        this.coinText = this.add.text(30, 70, '🪙 x0', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#facc15'
-        }).setScrollFactor(0).setDepth(100);
+        // ── Lives counter ────────────────────────────────────────────────────
+        this.livesText = this.add.text(barX, barY + 22, `♥ x${this.playerLives}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ff6666'
+        }).setScrollFactor(0).setDepth(101);
+
+        // ── Coin counter ─────────────────────────────────────────────────────
+        this.coinText = this.add.text(barX, barY + 40, '🪙 x0', {
+            fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#facc15'
+        }).setScrollFactor(0).setDepth(101);
+
+        // ── Combo counter ─────────────────────────────────────────────────────
+        this.comboText = this.add.text(W / 2, 70, '', {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ff6600',
+            stroke: '#000', strokeThickness: 4,
+        }).setScrollFactor(0).setDepth(101).setOrigin(0.5);
+
+        // ── Control hint (fades after 5 s) ────────────────────────────────────
+        const hint = this.add.text(W / 2, 4,
+            '← → MOVE  |  SPACE JUMP  |  SHIFT DASH  |  F FIRE',
+            { fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#888888' }
+        ).setScrollFactor(0).setDepth(101).setOrigin(0.5);
+        this.time.delayedCall(5000, () =>
+            this.tweens.add({ targets: hint, alpha: 0, duration: 800, onComplete: () => hint.destroy() })
+        );
     }
 
     updateHUD() {
-        // Update hearts
-        for (let i = 0; i < this.hearts.length; i++) {
-            this.hearts[i].setText(i < this.playerHP ? '❤️' : '🖤');
+        // HP segments — filled = green→yellow→red based on HP ratio
+        const ratio = this.playerHP / this.playerMaxHP;
+        const segColor = ratio > 0.6 ? 0x33ee44 : ratio > 0.3 ? 0xffd000 : 0xff2222;
+        for (let i = 0; i < this.hpSegments.length; i++) {
+            this.hpSegments[i].setFillStyle(i < this.playerHP ? segColor : 0x220000);
         }
-        // Update coins
-        this.coinText.setText('🪙 x' + this.coinCount);
+        // Lives
+        if (this.livesText) this.livesText.setText(`♥ x${this.playerLives}`);
+        // Coins
+        if (this.coinText) this.coinText.setText('🪙 x' + this.coinCount);
+
+        // Low-HP pulse warning on the bar when 1 HP left
+        if (this.playerHP <= 1 && !this.isDead) {
+            this.startLowHpWarning();
+        } else {
+            this.stopLowHpWarning();
+        }
     }
 
     collectCoin(_player: any, coin: any) {
@@ -395,85 +497,260 @@ export class Game extends Scene {
     }
 
     hitEnemy(_player: any, enemy: any) {
-        // Stomp from above
-        if (this.player.body!.velocity.y > 0 && this.player.y < enemy.y - 20) {
-            enemy.destroy();
-            this.player.setVelocityY(-400); // Stronger bounce
-            this.score += 200;
-            EventBus.emit('update-score', this.score);
-            this.cameras.main.shake(150, 0.008);
+        // Dash = immune window
+        if (this.invincible) return;
 
-            // Score popup with better animation
-            const scoreText = this.add.text(enemy.x, enemy.y, '+200', {
-                fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#4ade80'
-            }).setOrigin(0.5);
-            this.tweens.add({
-                targets: scoreText,
-                y: enemy.y - 60,
-                alpha: 0,
-                duration: 700,
-                ease: 'Quad.easeOut',
-                onComplete: (_tween: any, targets: any[]) => { targets[0].destroy(); }
-            });
+        // Stomp from above — kill enemy, bounce player
+        if (this.player.body!.velocity.y > 0 && this.player.y < enemy.y - 10) {
+            this.spawnImpactPuff(enemy.x, enemy.y, 0xff4400);
+            enemy.destroy();
+            this.player.setVelocityY(-480);  // satisfying bounce
+            this.registerKill(enemy.x, enemy.y, 200);
+            this.cameras.main.shake(100, 0.008);
         } else {
-            this.takeDamage();
+            // Side/bottom collision — take 1 damage
+            this.takeDamage(1, enemy);
         }
     }
 
     hitProjectile(_player: any, projectile: any) {
+        if (this.invincible) return;
         projectile.destroy();
-        this.takeDamage();
+        // Boss projectiles deal 2 damage
+        this.takeDamage(2, null);
     }
 
-    takeDamage() {
-        if (this.invincible) return;
+    // ═══════════════════════════════════════════════════════
+    //   DAMAGE SYSTEM — full remake
+    // ═══════════════════════════════════════════════════════
 
-        this.playerHP--;
+    /**
+     * @param amount   HP to remove (1 = normal, 2 = heavy)
+     * @param source   The enemy/object that caused damage (for knockback direction)
+     */
+    takeDamage(amount: number = 1, source: any) {
+        if (this.invincible || this.isDead || this.gameOverShowing) return;
+
         this.invincible = true;
+        this.playerHP   = Math.max(0, this.playerHP - amount);
         this.updateHUD();
         EventBus.emit('update-hp', this.playerHP);
 
-        // Flash player RED (damage indicator)
-        this.player.setTint(0xff6b6b);
-        this.cameras.main.shake(250, 0.015);
+        // ── 1. Screen vignette flash ─────────────────────────────────
+        this.vignetteOverlay.setAlpha(amount >= 2 ? 0.55 : 0.35);
+        this.tweens.add({
+            targets: this.vignetteOverlay,
+            alpha: 0,
+            duration: 600,
+            ease: 'Quad.easeOut',
+        });
 
-        // Knockback with more force
-        const knockDir = this.player.flipX ? 250 : -250;
-        this.player.setVelocity(knockDir, -300);
+        // ── 2. Camera shake (heavier for 2-damage hits) ──────────────
+        this.cameras.main.shake(amount >= 2 ? 400 : 220, amount >= 2 ? 0.025 : 0.012);
 
-        // Invincibility frames (red blinking)
+        // ── 3. Knockback away from source ────────────────────────────
+        const knockXDir = source
+            ? (this.player.x < source.x ? -1 : 1)   // away from enemy
+            : (this.player.flipX ? 1 : -1);           // away from facing dir (projectile)
+        const knockPower = amount >= 2 ? 380 : 260;
+        this.player.setVelocity(knockXDir * knockPower, -320);
+
+        // ── 4. Player flash (red blink iframes) ──────────────────────
+        this.player.setTint(0xff2222);
         let flashCount = 0;
+        const IFRAMES = amount >= 2 ? 26 : 18;   // longer iframes for heavy hits
         const flashTimer = this.time.addEvent({
-            delay: 80,
+            delay: 70,
+            loop: true,
             callback: () => {
                 flashCount++;
-                if (flashCount % 2 === 0) {
-                    this.player.setAlpha(1);
-                    this.player.clearTint();
-                } else {
-                    this.player.setAlpha(0.5);
-                    this.player.setTint(0xff6b6b);
-                }
-                if (flashCount >= 18) {
+                if (flashCount % 2 === 0) { this.player.setAlpha(1); this.player.clearTint(); }
+                else                      { this.player.setAlpha(0.4); this.player.setTint(0xff2222); }
+                if (flashCount >= IFRAMES) {
                     flashTimer.destroy();
                     this.player.setAlpha(1);
                     this.player.clearTint();
                     this.invincible = false;
                 }
             },
-            loop: true
         });
 
+        // ── 5. Damage number popup ───────────────────────────────────
+        const dmgLabel = this.add.text(this.player.x, this.player.y - 30,
+            `-${amount} HP`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: amount >= 2 ? '14px' : '11px',
+                color: amount >= 2 ? '#ff2222' : '#ff8888',
+                stroke: '#000', strokeThickness: 3,
+            }
+        ).setOrigin(0.5).setDepth(150);
+        this.tweens.add({
+            targets: dmgLabel, y: dmgLabel.y - 55, alpha: 0,
+            duration: 900, ease: 'Quad.easeOut',
+            onComplete: () => dmgLabel.destroy(),
+        });
+
+        // ── 6. Death check ───────────────────────────────────────────
         if (this.playerHP <= 0) {
-            // Death
-            this.time.delayedCall(500, () => {
-                this.playerHP = this.playerMaxHP;
-                this.player.setPosition(100, 500);
-                this.player.setVelocity(0, 0);
-                this.updateHUD();
-                EventBus.emit('update-hp', this.playerHP);
-                this.cameras.main.flash(600, 255, 100, 100);
-            });
+            this.handleDeath();
+        }
+    }
+
+    handleDeath() {
+        if (this.isDead) return;
+        this.isDead    = true;
+        this.invincible = true;
+        this.playerLives--;
+
+        // Freeze all input
+        this.inputActive = false;
+        if (this.input.keyboard) this.input.keyboard.enabled = false;
+
+        // ── Death animation: spin + fall ─────────────────────────────
+        (this.player.body as Phaser.Physics.Arcade.Body).allowGravity = true;
+        this.player.setVelocity(0, -200);
+        this.tweens.add({
+            targets: this.player,
+            angle:   720,
+            alpha:   0,
+            y:       this.player.y + 300,
+            duration: 1100,
+            ease: 'Quad.easeIn',
+        });
+
+        // ── Big red flash then decide: respawn or game over ──────────
+        this.cameras.main.flash(300, 255, 30, 30);
+        this.cameras.main.shake(400, 0.03);
+
+        this.time.delayedCall(1400, () => {
+            if (this.playerLives <= 0) {
+                this.showGameOver();
+            } else {
+                this.respawnPlayer();
+            }
+        });
+    }
+
+    respawnPlayer() {
+        // Restore HP for new life
+        this.playerHP  = this.playerMaxHP;
+        this.isDead    = false;
+        this.invincible = false;
+        this.updateHUD();
+        EventBus.emit('update-hp', this.playerHP);
+
+        // Reset player
+        this.player.setAngle(0).setAlpha(1);
+        this.player.setPosition(100, 550);
+        this.player.setVelocity(0, 0);
+        (this.player.body as Phaser.Physics.Arcade.Body).allowGravity = true;
+
+        // Re-enable input
+        this.inputActive = true;
+        if (this.input.keyboard) this.input.keyboard.enabled = true;
+
+        // Spawn-in flash
+        this.cameras.main.flash(500, 50, 255, 80);
+
+        // Brief immortality after respawn
+        this.invincible = true;
+        this.time.delayedCall(1500, () => { this.invincible = false; });
+
+        // RESPAWN text
+        const W = this.cameras.main.width;
+        const respawnLabel = this.add.text(W / 2, this.cameras.main.height / 2 - 40,
+            `RESPAWN!\n♥ x${this.playerLives} LIVES LEFT`, {
+                fontFamily: '"Press Start 2P"', fontSize: '20px',
+                color: '#4ade80', stroke: '#000', strokeThickness: 4,
+                align: 'center',
+            }
+        ).setScrollFactor(0).setDepth(201).setOrigin(0.5);
+        this.tweens.add({
+            targets: respawnLabel, alpha: 0, delay: 1800, duration: 600,
+            onComplete: () => respawnLabel.destroy(),
+        });
+    }
+
+    showGameOver() {
+        this.gameOverShowing = true;
+        this.inputActive     = false;
+        if (this.input.keyboard) this.input.keyboard.enabled = false;
+
+        const W = this.cameras.main.width;
+        const H = this.cameras.main.height;
+
+        // Dark overlay
+        const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.85)
+            .setScrollFactor(0).setDepth(300);
+        this.tweens.add({ targets: overlay, alpha: 0.85, from: 0, duration: 600 });
+
+        // GAME OVER text
+        const goText = this.add.text(W / 2, H / 2 - 80, 'GAME OVER', {
+            fontFamily: '"Press Start 2P"', fontSize: '36px',
+            color: '#ff2222', stroke: '#000', strokeThickness: 6,
+        }).setScrollFactor(0).setDepth(301).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({ targets: goText, alpha: 1, y: H / 2 - 90, duration: 700, ease: 'Back.easeOut' });
+
+        // Pulse
+        this.tweens.add({ targets: goText, scaleX: 1.05, scaleY: 1.05, yoyo: true, repeat: -1, duration: 600, delay: 700 });
+
+        // Score
+        this.add.text(W / 2, H / 2 - 20, `SCORE: ${String(this.score).padStart(7, '0')}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#facc15',
+            stroke: '#000', strokeThickness: 3,
+        }).setScrollFactor(0).setDepth(301).setOrigin(0.5);
+
+        // Coins
+        this.add.text(W / 2, H / 2 + 10, `COINS: ${this.coinCount}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#fbbf24',
+        }).setScrollFactor(0).setDepth(301).setOrigin(0.5);
+
+        // Retry button
+        const retryBtn = this.add.text(W / 2, H / 2 + 55, '[ PRESS R TO RETRY ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '13px',
+            color: '#4ade80', stroke: '#000', strokeThickness: 3,
+            backgroundColor: '#1a1a1a', padding: { x: 14, y: 8 },
+        }).setScrollFactor(0).setDepth(301).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        this.tweens.add({ targets: retryBtn, alpha: 0.4, yoyo: true, repeat: -1, duration: 500 });
+
+        const restart = () => {
+            this.scene.restart();
+            EventBus.emit('update-score', 0);
+            EventBus.emit('update-coins', 0);
+            EventBus.emit('update-hp', 5);
+        };
+        retryBtn.on('pointerdown', restart);
+        if (this.input.keyboard) {
+            this.input.keyboard.enabled = true;
+            this.input.keyboard.once('keydown-R', restart);
+        }
+    }
+
+    // ── Low-HP pulsing warning ────────────────────────────────────────────
+    startLowHpWarning() {
+        if (this.lowHpWarningTimer) return;
+        this.lowHpWarningTimer = this.time.addEvent({
+            delay: 500, loop: true,
+            callback: () => {
+                this.tweens.add({
+                    targets: this.vignetteOverlay,
+                    alpha: 0.18,
+                    yoyo: true,
+                    duration: 250,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                        if (this.vignetteOverlay.alpha < 0.1) this.vignetteOverlay.setAlpha(0);
+                    },
+                });
+            },
+        });
+    }
+
+    stopLowHpWarning() {
+        if (this.lowHpWarningTimer) {
+            this.lowHpWarningTimer.destroy();
+            this.lowHpWarningTimer = null;
         }
     }
 
@@ -577,19 +854,23 @@ export class Game extends Scene {
     buildZones() {
         const groundY = 768 - 32;
 
-        // Start Zone (0 - 800)
-        this.add.text(400, 250, '⚔️ QUANTUM MESH ⚔️', {
+        // ── START ZONE (0 – 800) ──────────────────────────────
+        this.add.text(400, 220, '⚔️ CODE QUEST ⚔️', {
             fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c084fc', align: 'center'
         }).setOrigin(0.5);
-        this.add.text(400, 310, 'Use ARROWS or WASD to move', {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#60a5fa', align: 'center'
+        this.add.text(400, 275, '← → MOVE  |  SPACE JUMP  |  SHIFT DASH', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#60a5fa', align: 'center'
         }).setOrigin(0.5);
-        this.add.text(400, 340, 'SPACE or W to jump', {
-            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#60a5fa', align: 'center'
+        this.add.text(400, 305, 'F KEY = SHOOT FIREBALL  |  JUMP×2 = DOUBLE JUMP', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ade80', align: 'center'
+        }).setOrigin(0.5);
+        this.add.text(400, 340, 'STOMP ENEMIES FROM ABOVE OR SHOOT THEM!', {
+            fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#fbbf24', align: 'center'
         }).setOrigin(0.5);
 
-        // Starter coins (teach player to collect)
+        // Starter coins + a starter enemy to show off combat
         this.spawnCoins(200, groundY - 80, 5);
+        this.spawnEnemy(600, 500, 750);
 
         // ====== Zone 1: About (1000 - 2000) ======
         this.add.text(1200, 280, '🏰 ZONE 1: THE ANCIENT HALLS 🏰', {
@@ -602,7 +883,7 @@ export class Game extends Scene {
         }).setOrigin(0.5);
 
         const aboutContent = [
-            "Quantum Mesh is the ultimate hackathon. Build the future.",
+            "CodeQuest is the ultimate hackathon. Build the future.",
             "Theme: Innovate to Elevate. Create solutions that matter.",
             "Everyone is welcome. Students, pros, and creatives."
         ];
@@ -779,16 +1060,26 @@ export class Game extends Scene {
         this.bossHealthBarFill.setVisible(false);
 
         // Boss Sprite
-        this.boss = this.physics.add.sprite(5200, 500, 'boss_placeholder');
+        this.boss = this.physics.add.sprite(5200, 350, 'boss_placeholder');
         (this.boss.body as Phaser.Physics.Arcade.Body).allowGravity = false;
         this.boss.setImmovable(true);
         this.physics.add.collider(this.player, this.boss, () => {
             if (!this.bossDead && !this.invincible) {
-                this.takeDamage();
+                // Boss body touch = heavy 2-HP hit
+                this.takeDamage(2, this.boss);
             }
         });
         this.boss.setVisible(false);
         (this.boss.body as Phaser.Physics.Arcade.Body).checkCollision.none = true;
+
+        // Fireballs hit boss (MUST be added here, after boss is instantiated)
+        this.physics.add.overlap(this.fireballs, this.boss, (fb: any) => {
+            if (!this.bossDead && this.boss.active && this.boss.getData('fightStarted')) {
+                fb.destroy();
+                this.damageBoss();
+                this.registerKill(this.boss.x, this.boss.y, 0);
+            }
+        }, undefined, this);
     }
 
     startBossFight() {
@@ -856,12 +1147,12 @@ export class Game extends Scene {
     }
 
     bossShoot() {
-        if (this.bossDead || !this.boss.active) return;
+        if (this.bossDead || !this.boss || !this.boss.active) return;
 
         // Flash boss before shooting
         this.boss.setTint(0xff00ff);
         this.time.delayedCall(200, () => {
-            if (this.bossDead) return;
+            if (this.bossDead || !this.boss || !this.boss.active) return;
             this.boss.clearTint();
 
             // Fire 3 projectiles in spread pattern
@@ -888,7 +1179,7 @@ export class Game extends Scene {
     }
 
     bossCharge() {
-        if (this.bossDead || this.bossCharging || !this.boss.active) return;
+        if (this.bossDead || this.bossCharging || !this.boss || !this.boss.active) return;
         this.bossCharging = true;
 
         // Warning telegraph
@@ -896,7 +1187,7 @@ export class Game extends Scene {
         this.bossText.setText('INCOMING!');
 
         this.time.delayedCall(800, () => {
-            if (this.bossDead) return;
+            if (this.bossDead || !this.boss || !this.boss.active) return;
 
             const targetX = this.player.x;
 
@@ -907,7 +1198,7 @@ export class Game extends Scene {
                 duration: 600,
                 ease: 'Quad.easeIn',
                 onComplete: () => {
-                    if (this.bossDead) return;
+                    if (this.bossDead || !this.boss || !this.boss.active) return;
                     // Slam effect
                     this.cameras.main.shake(300, 0.02);
 
@@ -918,8 +1209,11 @@ export class Game extends Scene {
                         duration: 1000,
                         ease: 'Quad.easeOut',
                         onComplete: () => {
+                            if (!this.boss || !this.boss.active) return;
                             this.boss.clearTint();
-                            this.bossText.setText('PRESS F TO ATTACK!');
+                            if (this.bossText && this.bossText.active) {
+                                this.bossText.setText('PRESS F TO ATTACK!');
+                            }
                             this.bossCharging = false;
                         }
                     });
@@ -959,7 +1253,7 @@ export class Game extends Scene {
             yoyo: true,
             ease: 'Quad.easeOut'
         });
-        this.time.delayedCall(150, () => { if (this.boss.active) this.boss.clearTint(); });
+        this.time.delayedCall(150, () => { if (this.boss && this.boss.active && !this.bossDead) this.boss.clearTint(); });
 
         // Feedback text with scale
         const dmgText = this.add.text(this.boss.x, this.boss.y - 60, 'HIT!', {
@@ -997,6 +1291,9 @@ export class Game extends Scene {
             this.bossDead = true;
             if (this.bossAttackTimer) this.bossAttackTimer.destroy();
 
+            // Cancel any mid-air or charging tweens on the boss so it doesn't slam into us while dying
+            this.tweens.killTweensOf(this.boss);
+
             this.bossText.setText('SYSTEM STABILIZED!');
             this.bossHealthBarFill.setScale(0, 1);
 
@@ -1025,7 +1322,7 @@ export class Game extends Scene {
                     this.time.delayedCall(1500, () => {
                         this.bossText.setText('VICTORY!');
                         this.time.delayedCall(2000, () => {
-                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated The Glitch Overlord! The journey into Quantum Mesh begins here.' });
+                            EventBus.emit('open-modal', { id: 'credits', title: 'GAME COMPLETED', content: 'You defeated The Glitch Overlord! The CodeQuest journey begins here — register your team!' });
                             EventBus.emit('level-complete');
                         });
                     });
@@ -1038,45 +1335,163 @@ export class Game extends Scene {
         }
     }
 
+    // ── FIREBALL ATTACK ───────────────────────────────────────────────────
+    firePlayerBall() {
+        if (!this.player || !this.player.active) return;
+
+        const dir = this.player.getFacingDirection();
+        const offsetX = dir === 1 ? 28 : -28;
+
+        const fb = this.fireballs.create(
+            this.player.x + offsetX,
+            this.player.y - 4,
+            'fireball'
+        ) as Phaser.Physics.Arcade.Image;
+
+        if (!fb) return;
+        (fb.body as Phaser.Physics.Arcade.Body).allowGravity = false;
+        fb.setVelocityX(dir * 600);
+        fb.setDepth(5);
+
+        // Spin the fireball
+        this.tweens.add({ targets: fb, angle: 360 * dir, repeat: -1, duration: 300 });
+
+        // Trailing glow particles
+        const trail = this.time.addEvent({
+            delay: 30, repeat: 20,
+            callback: () => {
+                if (!fb.active) { trail.destroy(); return; }
+                const glow = this.add.circle(fb.x, fb.y, 5, 0xff6600, 0.5);
+                this.tweens.add({
+                    targets: glow, scaleX: 0, scaleY: 0, alpha: 0, duration: 200,
+                    onComplete: () => glow.destroy(),
+                });
+            },
+        });
+
+        // Muzzle flash at player
+        const flash = this.add.star(this.player.x + offsetX, this.player.y - 4, 6, 4, 14, 0xffdd00);
+        this.tweens.add({ targets: flash, alpha: 0, scaleX: 0, scaleY: 0, duration: 200, onComplete: () => flash.destroy() });
+
+        // Auto-destroy fireball after 2.5 s
+        this.time.delayedCall(2500, () => { if (fb.active) { this.spawnImpactPuff(fb.x, fb.y, 0xff6600); fb.destroy(); } });
+
+        // Attack animation: brief white flash on player
+        this.player.setTint(0xffff88);
+        this.time.delayedCall(80, () => { if (this.player.active) this.player.clearTint(); });
+    }
+
+    // ── IMPACT PARTICLES ─────────────────────────────────────────────────
+    spawnImpactPuff(x: number, y: number, color: number) {
+        const count = 8;
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const speed = Phaser.Math.Between(60, 140);
+            const puff  = this.add.circle(x, y, Phaser.Math.Between(3, 7), color, 1);
+            this.tweens.add({
+                targets: puff,
+                x: x + Math.cos(angle) * speed,
+                y: y + Math.sin(angle) * speed,
+                alpha: 0,
+                scaleX: 0.2, scaleY: 0.2,
+                duration: Phaser.Math.Between(250, 450),
+                ease: 'Quad.easeOut',
+                onComplete: () => puff.destroy(),
+            });
+        }
+        this.cameras.main.shake(80, 0.006);
+    }
+
+    // ── COMBO KILL COUNTER ───────────────────────────────────────────────
+    registerKill(x: number, y: number, basePoints: number) {
+        if (basePoints > 0) {
+            this.score += basePoints;
+            EventBus.emit('update-score', this.score);
+        }
+
+        this.combo++;
+        const multiplier = Math.min(this.combo, 8);
+        const points = basePoints > 0 ? basePoints * multiplier : 0;
+        if (points > 0) {
+            this.score += points - basePoints; // already added basePoints above
+            EventBus.emit('update-score', this.score);
+        }
+
+        // Score popup
+        const colors = ['#4ade80', '#fbbf24', '#f97316', '#ef4444', '#c084fc'];
+        const colorIdx = Math.min(this.combo - 1, colors.length - 1);
+        const popupText = this.combo > 1
+            ? `x${this.combo} COMBO!\n+${basePoints * multiplier}`
+            : `+${basePoints}`;
+
+        const popup = this.add.text(x, y - 20, popupText, {
+            fontFamily: '"Press Start 2P"',
+            fontSize:   this.combo > 1 ? '16px' : '12px',
+            color:      colors[colorIdx],
+            align: 'center',
+            stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(20);
+
+        this.tweens.add({
+            targets: popup, y: popup.y - 70, alpha: 0,
+            scaleX: this.combo > 1 ? 1.3 : 1,
+            scaleY: this.combo > 1 ? 1.3 : 1,
+            duration: 800, ease: 'Quad.easeOut',
+            onComplete: () => popup.destroy(),
+        });
+
+        // Camera zoom-punch on high combos
+        if (this.combo >= 3) {
+            this.cameras.main.shake(120, 0.01);
+        }
+
+        // Update HUD combo label
+        if (this.combo > 1 && this.comboText) {
+            this.comboText.setText(`${this.combo}x COMBO!`).setAlpha(1);
+            this.tweens.add({ targets: this.comboText, alpha: 0, delay: 1200, duration: 600 });
+        }
+
+        // Reset combo timer
+        if (this.comboTimer) this.comboTimer.destroy();
+        this.comboTimer = this.time.delayedCall(2500, () => { this.combo = 0; });
+    }
+
     update() {
         if (!this.inputActive) return;
 
         if (this.player) {
             this.player.update();
 
-            // Update background color based on time of day
-            const baseColor = this.getTimeOfDayColor();
+            // ── F-key FIREBALL ATTACK ────────────────────────────
+            if (this.player.isAttackPressed()) {
+                this.firePlayerBall();
+            }
 
-            // Background Color Shift on Boss approach
+            // Background shift + zoom on boss approach
+            const baseColor = this.getTimeOfDayColor();
             if (this.player.x > 4300) {
                 const progress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
                 const startColor = Phaser.Display.Color.HexStringToColor(baseColor);
-                const endColor = Phaser.Display.Color.HexStringToColor('#0a0010');
+                const endColor   = Phaser.Display.Color.HexStringToColor('#0a0010');
                 const color = Phaser.Display.Color.Interpolate.ColorWithColor(startColor, endColor, 100, progress * 100);
                 this.cameras.main.setBackgroundColor(Phaser.Display.Color.GetColor(color.r, color.g, color.b));
-
-                // Zoom out as player approaches boss
                 const zoomProgress = Phaser.Math.Clamp((this.player.x - 4300) / 500, 0, 1);
-                const targetZoom = 1.15 - (zoomProgress * 0.25); // Zoom from 1.15 to 0.9
-                this.cameras.main.setZoom(targetZoom);
+                this.cameras.main.setZoom(1.15 - zoomProgress * 0.25);
             } else {
                 this.cameras.main.setBackgroundColor(baseColor);
                 this.cameras.main.setZoom(1.15);
             }
 
-            // Start boss fight when entering arena
+            // Start boss fight
             if (this.player.x > 4800 && !this.bossDead && this.boss && !this.boss.getData('fightStarted')) {
                 this.startBossFight();
             }
         }
 
-        // Player attack: F key fires fireball
-        // Removed - fireball system disabled
-
-        // Boss interaction
+        // Boss proximity hint
         if (this.player && this.boss && this.boss.active && !this.bossDead) {
             const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.boss.x, this.boss.y);
-            if (dist < 200) {
+            if (dist < 220) {
                 this.bossText.setText('PRESS F TO ATTACK!');
             }
         }

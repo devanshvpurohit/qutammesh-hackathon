@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RegistrationForm } from '../components/RegistrationForm';
 
 type Page = 'about' | 'themes' | 'schedule' | 'location' | 'register';
 
@@ -19,7 +20,7 @@ export function Website() {
       {/* Header */}
       <div className="bg-hackathon-surface border-b-4 border-white z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl md:text-3xl text-hackathon-primary glow-text">QUANTUM MESH</h1>
+          <h1 className="text-2xl md:text-3xl text-hackathon-primary glow-text">CODE<span className="text-hackathon-accent">QUEST</span></h1>
           <button
             onClick={() => window.location.reload()}
             className="pixel-btn text-xs md:text-sm"
@@ -94,17 +95,17 @@ export function Website() {
 
                 {/* About Section */}
                 <div className="pixel-card mb-12">
-                  <h3 className="text-2xl text-hackathon-primary mb-4">🎮 WHAT IS QUANTUM MESH?</h3>
+                  <h3 className="text-2xl text-hackathon-primary mb-4">🎮 WHAT IS CODEQUEST?</h3>
                   <p className="text-gray-300 leading-relaxed mb-4">
-                    Quantum Mesh is a 24-hour hackathon celebrating retro technology and modern innovation. 
-                    Teams will compete to build creative projects while navigating our interactive pixel-art 
-                    platformer game. Whether you're a seasoned hacker or just starting out, there's a place 
+                    CodeQuest is a 24-hour hackathon celebrating retro technology and modern innovation.
+                    Teams compete to build creative projects while navigating our interactive pixel-art
+                    platformer game. Whether you're a seasoned hacker or just starting out, there's a place
                     for you in our community.
                   </p>
                   <p className="text-gray-300 leading-relaxed mb-4">
-                    This is more than just a coding competition - it's a celebration of creativity, collaboration, 
-                    and the spirit of making. Join hundreds of developers, designers, and innovators for an 
-                    unforgettable weekend.
+                    This is more than just a coding competition — it's a celebration of creativity, collaboration,
+                    and the spirit of making. Join hundreds of developers, designers, and innovators for an
+                    unforgettable weekend at IARE, Hyderabad.
                   </p>
                 </div>
 
@@ -441,20 +442,11 @@ export function Website() {
                   </div>
                 </div>
 
-                {/* CTA */}
-                <div className="pixel-card text-center">
-                  <p className="text-gray-300 mb-6">Ready to join the hackathon?</p>
-                  <a
-                    href="https://quantum-mesh.dev/register"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="pixel-btn text-lg pulse-glow inline-block"
-                  >
-                    REGISTER YOUR TEAM
-                  </a>
-                  <p className="text-gray-500 text-xs mt-6">
-                    Questions? Email us at hello@quantum-mesh.dev
-                  </p>
+                {/* Embedded Registration Form (connected to Google Sheets) */}
+                <div className="pixel-card">
+                  <h3 className="text-xl text-hackathon-primary mb-2">📝 REGISTER YOUR TEAM</h3>
+                  <p className="text-[10px] text-gray-400 mb-4">Fill in your details — responses are saved directly to Google Sheets.</p>
+                  <RegistrationForm />
                 </div>
               </motion.div>
             )}
@@ -464,7 +456,7 @@ export function Website() {
 
       {/* Footer */}
       <div className="bg-hackathon-surface border-t-2 border-white/30 text-center py-4 text-gray-600 text-xs">
-        <p>© 2026 QUANTUM MESH • BUILT WITH REACT + PHASER 3</p>
+        <p>© 2026 CODEQUEST • BUILT WITH REACT + PHASER 3 • 📊 POWERED BY GOOGLE SHEETS</p>
       </div>
     </div>
   );
