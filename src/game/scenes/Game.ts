@@ -366,16 +366,22 @@ export class Game extends Scene {
         this.physics.add.collider(this.coins,   this.platforms);
 
         // Fireballs hit platforms (destroy)
-        this.physics.add.collider(this.fireballs, this.platforms, (fb: any) => {
-            this.spawnImpactPuff(fb.x, fb.y, 0xff6600);
-            fb.destroy();
+        this.physics.add.collider(this.fireballs, this.platforms, (fb: any, plat: any) => {
+            const fireball = fb.texture.key === 'fireball' ? fb : plat;
+            this.spawnImpactPuff(fireball.x, fireball.y, 0xff6600);
+            fireball.destroy();
         });
 
         // Fireballs hit enemies
-        this.physics.add.overlap(this.fireballs, this.enemies, (fb: any, enemy: any) => {
+        this.physics.add.overlap(this.fireballs, this.enemies, (obj1: any, obj2: any) => {
+            const fireball = obj1.texture?.key === 'fireball' ? obj1 : obj2;
+            const enemy = obj1.texture?.key === 'fireball' ? obj2 : obj1;
+            
+            if (!fireball.active || !enemy.active) return;
+            
             this.spawnImpactPuff(enemy.x, enemy.y, 0xff4400);
-            fb.destroy();
-            enemy.destroy();
+            fireball.destroy();
+            enemy.disableBody(true, true);
             this.registerKill(enemy.x, enemy.y, 150);
         }, undefined, this);
 
@@ -1073,11 +1079,19 @@ export class Game extends Scene {
         (this.boss.body as Phaser.Physics.Arcade.Body).checkCollision.none = true;
 
         // Fireballs hit boss (MUST be added here, after boss is instantiated)
-        this.physics.add.overlap(this.fireballs, this.boss, (fb: any) => {
-            if (!this.bossDead && this.boss.active && this.boss.getData('fightStarted')) {
-                fb.destroy();
+        this.physics.add.overlap(this.fireballs, this.boss, (obj1: any, obj2: any) => {
+            const fireball = obj1.texture?.key === 'fireball' ? obj1 : obj2;
+            const bossObj = obj1.texture?.key === 'fireball' ? obj2 : obj1;
+            
+            if (!fireball.active) return;
+
+            if (!this.bossDead && bossObj.active && bossObj.getData('fightStarted')) {
+                // Disable instead of destroy to avoid broadphase crashes mid-step
+                fireball.disableBody(true, true);
+                fireball.destroy(); 
+                
                 this.damageBoss();
-                this.registerKill(this.boss.x, this.boss.y, 0);
+                this.registerKill(bossObj.x, bossObj.y, 0);
             }
         }, undefined, this);
     }
