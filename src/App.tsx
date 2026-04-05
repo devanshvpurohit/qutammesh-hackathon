@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { PhaserGame } from './game/PhaserGame';
 import type { IRefPhaserGame } from './game/PhaserGame';
 import { OverlayModals } from './components/OverlayModals';
+import { EventBus } from './game/EventBus';
 import { Website } from './pages/Website';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -262,7 +263,61 @@ function App() {
             <PhaserGame ref={phaserRef} currentActiveScene={onActiveScene} />
             <OverlayModals />
 
+            {/* Mobile Touch Controls - Visible only on md/sm screens */}
+            <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-between items-end md:hidden select-none pointer-events-none">
+              {/* D-Pad (Left/Right) */}
+              <div className="flex gap-2 pointer-events-auto">
+                <button 
+                  className="w-16 h-16 bg-white/20 border-2 border-white/50 rounded-full active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                  onTouchStart={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'left', state: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'left', state: false }); }}
+                  onMouseDown={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'left', state: true }); }}
+                  onMouseUp={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'left', state: false }); }}
+                >
+                  ◀
+                </button>
+                <button 
+                  className="w-16 h-16 bg-white/20 border-2 border-white/50 rounded-full active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                  onTouchStart={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'right', state: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'right', state: false }); }}
+                  onMouseDown={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'right', state: true }); }}
+                  onMouseUp={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'right', state: false }); }}
+                >
+                  ▶
+                </button>
+              </div>
 
+              {/* Action Buttons (Jump, Attack, Dash) */}
+              <div className="flex gap-2 pointer-events-auto">
+                <button 
+                  className="w-14 h-14 bg-hackathon-accent/30 border-2 border-hackathon-accent rounded-full active:bg-hackathon-accent/60 flex items-center justify-center backdrop-blur-sm"
+                  onTouchStart={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'shift', state: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'shift', state: false }); }}
+                  onMouseDown={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'shift', state: true }); }}
+                  onMouseUp={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'shift', state: false }); }}
+                >
+                  ⚡
+                </button>
+                <button 
+                  className="w-16 h-16 bg-red-500/30 border-2 border-red-500 rounded-full active:bg-red-500/60 flex items-center justify-center mb-6 backdrop-blur-sm shadow-[0_0_15px_rgba(239,68,68,0.5)]"
+                  onTouchStart={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'f', state: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'f', state: false }); }}
+                  onMouseDown={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'f', state: true }); }}
+                  onMouseUp={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'f', state: false }); }}
+                >
+                  ☄️
+                </button>
+                <button 
+                  className="w-16 h-16 bg-hackathon-primary/30 border-2 border-hackathon-primary rounded-full active:bg-hackathon-primary/60 flex items-center justify-center backdrop-blur-sm shadow-[0_0_15px_rgba(74,222,128,0.5)]"
+                  onTouchStart={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'up', state: true }); }}
+                  onTouchEnd={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'up', state: false }); }}
+                  onMouseDown={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'up', state: true }); }}
+                  onMouseUp={(e) => { e.preventDefault(); EventBus.emit('mobile-input', { key: 'up', state: false }); }}
+                >
+                  ▲
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

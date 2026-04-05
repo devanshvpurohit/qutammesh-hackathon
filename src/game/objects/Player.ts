@@ -7,6 +7,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private fKey!: Phaser.Input.Keyboard.Key;
     private shiftKey!: Phaser.Input.Keyboard.Key;
 
+    // Mobile Virtual Inputs
+    private mInput = { left: false, right: false, up: false, shift: false };
+    private mJustPressed = { up: false, f: false, shift: false };
+    private mJustReleased = { up: false };
+
     public getCursors() { return this.cursors; }
 
     // ── Physics ──────────────────────────────────────────
@@ -58,6 +63,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.fKey     = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
             this.shiftKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
         }
+
+        // Hook Mobile Inputs
+        EventBus.on('mobile-input', (data: { key: string, state: boolean }) => {
+            const k = data.key as keyof typeof this.mInput;
+            if (this.mInput[k] !== undefined) this.mInput[k] = data.state;
+            
+            if (data.state) {
+                if (k === 'up') this.mJustPressed.up = true;
+                if (k === 'shift') this.mJustPressed.shift = true;
+                if (data.key === 'f') this.mJustPressed.f = true;
+            } else {
+                if (k === 'up') this.mJustReleased.up = true;
+            }
+        });
+        
+        // Clean up event listener when player is destroyed
+        this.on('destroy', () => { EventBus.removeListener('mobile-input'); });
     }
 
     // ─── Called by Game scene each update ────────────────
@@ -77,8 +99,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.isDashing) return;
 
         // ── Horizontal movement ──────────────────────────
-        const isLeft  = this.cursors.left.isDown  || this.wasdKeys.left.isDown;
-        const isRight = this.cursors.right.isDown || this.wasdKeys.right.isDown;
+        const isLeft  = this.cursors.left.isDown  || this.wasdKeys.left.isDown || this.mInput.left;
+        const isRight = this.cursors.right.isDown || this.wasdKeys.right.isDown || this.mInput.right;
 
         if (isLeft)       { this.setAccelerationX(-this.ACCEL); this.setFlipX(true);  }
         else if (isRight) { this.setAccelerationX(this.ACCEL);  this.setFlipX(false); }
@@ -87,10 +109,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // ── Jump ─────────────────────────────────────────
         const jumpJustDown = Phaser.Input.Keyboard.JustDown(this.cursors.up)   ||
                              Phaser.Input.Keyboard.JustDown(this.cursors.space) ||
-                             Phaser.Input.Keyboard.JustDown(this.wasdKeys.up);
+                             Phaser.Input.Keyboard.JustDown(this.wasdKeys.up) ||
+                             this.mJustPressed.up;
         const jumpReleased = Phaser.Input.Keyboard.JustUp(this.cursors.up)     ||
                              Phaser.Input.Keyboard.JustUp(this.cursors.space)   ||
-                             Phaser.Input.Keyboard.JustUp(this.wasdKeys.up);
+                             Phaser.Input.Keyboard.JustUp(this.wasdKeys.up) ||
+                             this.mJustReleased.up;
+                             
+        // Consume virtual inputs
+        this.mJustPressed.up = false;
+        this.mJustReleased.up = false;
 
         if (jumpJustDown) this.jumpBuffer = now + this.JUMP_BUFFER_MS;
 
@@ -117,7 +145,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // ── Dash (Shift) ──────────────────────────────────
-        if (Phaser.Input.Keyboard.JustDown(this.shiftKey) && now > this.dashCooldown) {
+        const dashJustDown = Phaser.Input.Keyboard.JustDown(this.shiftKey) || this.mJustPressed.shift;
+        this.mJustPressed.shift = false; // consume
+        
+        if (dashJustDown && now > this.dashCooldown) {
             this.executeDash();
         }
 
@@ -132,7 +163,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Called by Game scene to check F key outside Player.update()
     isAttackPressed(): boolean {
         const now = this.scene.time.now;
-        if (Phaser.Input.Keyboard.JustDown(this.fKey) && now > this.attackCooldown) {
+        const attackDown = Phaser.Input.Keyboard.JustDown(this.fKey) || this.mJustPressed.f;
+        this.mJustPressed.f = false; // consume
+        
+        if (attackDown && now > this.attackCooldown) {
             this.attackCooldown = now + this.ATTACK_COOLDOWN_MS;
             return true;
         }
